@@ -1,6 +1,13 @@
 # 🔬 CNN Interpretability Lab
 
-A premium, interactive AI interpretability tool designed to peel back the curtain on Convolutional Neural Networks. Built with **Python**, **Streamlit**, and **PyTorch**, this project demonstrates how a CNN "sees" and processes Fashion-MNIST images.
+An interactive CNN learning experience that explains how convolutional networks process images, from input tensor to softmax output. This repo includes:
+- a **live static web walkthrough** (`cnn_lab_ultimate.html`) for students
+- a **Python + Streamlit + PyTorch** lab stack for deeper experimentation
+
+## 🌐 Live Student Version (No Setup Required)
+
+- **GitHub Pages App:** https://radhika-verma06.github.io/CNN_UltimateGuide/cnn_lab_ultimate.html
+- Students can open this link directly in any browser (no clone, no install).
 
 ![Project Preview Placeholder](https://via.placeholder.com/800x400.png?text=CNN+Interpretability+Lab+Dashboard)
 
@@ -59,11 +66,23 @@ A premium, interactive AI interpretability tool designed to peel back the curtai
    streamlit run app.py
    ```
 
+### Run the Interactive HTML Version Locally
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open:
+
+`http://localhost:8000/cnn_lab_ultimate.html`
+
 ---
 
 ## 📂 Project Structure
 ```text
 cnn_lab/
+├── cnn_lab_ultimate.html # Final interactive student-facing CNN walkthrough
+├── cnn_explainer_v3.html # Earlier v3 visual version
 ├── app.py              # Main Streamlit entrance
 ├── model.py            # CNN Architecture & Preprocessing
 ├── interpretability.py # Grad-CAM & Saliency logic
