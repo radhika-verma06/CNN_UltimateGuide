@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNN — How Neural Networks See</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Syne+Mono&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #04040a;
+  --bg2: #07070f;
+  --surface: #0d0d1a;
+  --surface2: #111120;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.12);
+  --text: #f4f4fc;
+  --muted: #c4c4e0;
+  --dim: #7070a8;
+  --c1: #00d4ff;   /* cyan */
+  --c2: #a855f7;   /* purple */
+  --c3: #ff6b35;   /* orange */
+  --c4: #22c55e;   /* green */
+  --c5: #f59e0b;   /* amber */
+  --c6: #ec4899;   /* pink */
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Syne Mono', monospace;
+  --font-body: 'Outfit', sans-serif;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.75;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ── CUSTOM CURSOR ── */
+.cursor {
+  position: fixed; top:0; left:0; pointer-events:none; z-index:9999;
+  transition: transform 0.15s ease;
+}
+.cursor-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c1);
+  position: absolute; transform: translate(-50%,-50%);
+  box-shadow: 0 0 12px var(--c1);
+}
+.cursor-ring {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(0,212,255,0.4);
+  position: absolute; transform: translate(-50%,-50%);
+  transition: width 0.3s, height 0.3s, border-color 0.3s;
+}
+body:hover .cursor-ring { }
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset:0; z-index:0; pointer-events:none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* ── HERO ── */
+#hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+  padding: 40px 20px;
+}
+
+.hero-canvas {
+  position: absolute; inset: 0; z-index: 0;
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  text-align: center;
+  max-width: 900px;
+}
+
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px; letter-spacing: 4px;
+  color: var(--c1); text-transform: uppercase;
+  margin-bottom: 32px;
+  opacity: 0; animation: fadeUp 0.8s 0.3s forwards;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 9vw, 120px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -3px;
+  margin-bottom: 32px;
+  opacity: 0; animation: fadeUp 0.8s 0.5s forwards;
+}
+
+.hero-title .line1 { display: block; color: var(--text); }
+.hero-title .line2 {
+  display: block;
+  background: linear-gradient(135deg, var(--c1) 0%, var(--c2) 50%, var(--c3) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-family: var(--font-body);
+  font-size: 18px; color: #d4d4f0;
+  max-width: 500px; margin: 0 auto 48px;
+  line-height: 1.7; font-weight: 400;
+  opacity: 0; animation: fadeUp 0.8s 0.7s forwards;
+}
+
+.hero-cta {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 16px 36px;
+  border: 1px solid var(--c1);
+  color: var(--c1);
+  border-radius: 4px;
+  text-decoration: none;
+  letter-spacing: 2px; text-transform: uppercase;
+  transition: all 0.3s;
+  position: relative; overflow: hidden;
+  opacity: 0; animation: fadeUp 0.8s 0.9s forwards;
+  cursor: none;
+}
+.hero-cta::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: var(--c1); transform: scaleX(0);
+  transform-origin: left; transition: transform 0.3s ease;
+  z-index: -1;
+}
+.hero-cta:hover { color: var(--bg); }
+.hero-cta:hover::before { transform: scaleX(1); }
+
+/* scroll indicator */
+.scroll-hint {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 10px; color: var(--dim);
+  letter-spacing: 2px;
+  opacity: 0; animation: fadeUp 1s 1.5s forwards;
+}
+.scroll-line {
+  width: 1px; height: 40px;
+  background: linear-gradient(to bottom, var(--c1), transparent);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+@keyframes scrollPulse {
+  0%,100% { opacity: 0.3; transform: scaleY(1); }
+  50% { opacity: 1; transform: scaleY(1.2); }
+}
+
+/* ── STICKY NAV ── */
+#nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 56px;
+  background: rgba(4,4,10,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 40px;
+  transform: translateY(-100%);
+  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+}
+#nav.show { transform: translateY(0); }
+.nav-logo {
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--c1); letter-spacing: 2px; margin-right: auto;
+}
+.nav-pills { display: flex; gap: 4px; }
+.nav-pill {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--dim); transition: all 0.3s;
+  cursor: none;
+}
+.nav-pill.lit { background: var(--c1); box-shadow: 0 0 8px var(--c1); }
+.nav-pill.passed { background: var(--c4); }
+
+/* ── SECTION WRAPPER ── */
+.section {
+  max-width: 1200px; margin: 0 auto;
+  padding: 100px 40px;
+}
+
+/* ── PIPELINE STRIP ── */
+#pipeline-section {
+  padding: 80px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
+}
+.pipeline-track {
+  display: flex; align-items: stretch;
+  padding: 0 60px;
+  gap: 0;
+  overflow-x: auto; scrollbar-width: none;
+}
+.pipeline-track::-webkit-scrollbar { display: none; }
+
+.p-node {
+  flex-shrink: 0;
+  width: 140px;
+  padding: 24px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: none;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.p-node::before {
+  content: '';
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity 0.3s;
+  border-radius: 12px;
+}
+.p-node:hover { border-color: rgba(255,255,255,0.2); transform: translateY(-6px); }
+.p-node:hover::before { opacity: 1; }
+
+.p-connector {
+  flex-shrink: 0; width: 32px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.p-connector::after {
+  content: '';
+  position: absolute;
+  width: 100%; height: 1px;
+  background: linear-gradient(to right, var(--border2), var(--border2));
+}
+.p-conn-arrow {
+  width: 0; height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--dim);
+  position: relative; z-index: 1;
+}
+
+.p-num { font-family: var(--font-mono); font-size: 10px; color: var(--dim); margin-bottom: 10px; }
+.p-icon { font-size: 22px; margin-bottom: 10px; }
+.p-type { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+.p-label { font-family: var(--font-display); font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.p-shape-row { display: flex; align-items: center; gap: 4px; }
+.p-shape-in, .p-shape-out { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; }
+.p-shape-in { background: rgba(168,85,247,0.12); color: #c084fc; }
+.p-shape-out { background: rgba(0,212,255,0.1); color: var(--c1); }
+.p-mini-arr { color: var(--dim); font-size: 10px; }
+
+/* ── LAYER CARDS ── */
+.layer-section { padding: 0 40px 60px; max-width: 1200px; margin: 0 auto; }
+
+.lcard {
+  margin-bottom: 3px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition: border-color 0.3s;
+  scroll-margin-top: 70px;
+}
+.lcard:hover { border-color: var(--border2); }
+
+.lcard-header {
+  display: flex; align-items: center; gap: 20px;
+  padding: 28px 36px;
+  cursor: none;
+  position: relative;
+  transition: background 0.3s;
+  background: var(--surface);
+}
+.lcard-header:hover { background: var(--surface2); }
+
+.lcard-num {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--dim); min-width: 24px;
+}
+.lcard-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; flex-shrink: 0;
+  position: relative;
+}
+.lcard-text { flex: 1; }
+.lcard-type {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.lcard-name {
+  font-family: var(--font-display); font-size: 24px;
+  font-weight: 700; letter-spacing: -0.5px;
+}
+.lcard-code {
+  font-family: var(--font-mono); font-size: 13px;
+  color: #d4d4f0; margin-top: 4px;
+}
+.lcard-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.shape-flow {
+  display: flex; align-items: center; gap: 8px;
+}
+.sh { font-family: var(--font-mono); font-size: 12px; padding: 6px 12px; border-radius: 6px; }
+.sh-in { background: rgba(168,85,247,0.12); color: #c084fc; border: 1px solid rgba(168,85,247,0.2); }
+.sh-out { background: rgba(0,212,255,0.1); color: var(--c1); border: 1px solid rgba(0,212,255,0.2); }
+.sh-arr { color: var(--dim); }
+.params-badge {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 5px 12px; border-radius: 20px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+.params-badge.has-params { color: var(--c5); border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.06); }
+.chevron-icon { color: var(--dim); transition: transform 0.4s; font-size: 12px; }
+.lcard-header.open .chevron-icon { transform: rotate(180deg); }
+
+.lcard-body { display: none; background: var(--bg2); }
+.lcard-body.open { display: block; }
+
+.lcard-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+@media (max-width: 900px) { .lcard-inner { grid-template-columns: 1fr; } }
+
+.lcard-explain {
+  padding: 40px 36px;
+  border-right: 1px solid var(--border);
+}
+
+.explain-title {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+.explain-body {
+  font-size: 15px; color: #d4d4f0;
+  line-height: 1.85; font-weight: 400;
+  margin-bottom: 20px;
+}
+.callout {
+  padding: 16px 20px;
+  border-radius: 8px;
+  font-size: 15px; line-height: 1.75;
+  margin: 16px 0;
+}
+.callout-cyan { background: rgba(0,212,255,0.07); border-left: 3px solid var(--c1); color: #e8e8fc; }
+.callout-orange { background: rgba(255,107,53,0.08); border-left: 3px solid var(--c3); color: #e8e8fc; }
+.callout-green { background: rgba(34,197,94,0.07); border-left: 3px solid var(--c4); color: #e8e8fc; }
+.callout-purple { background: rgba(168,85,247,0.07); border-left: 3px solid var(--c2); color: #e8e8fc; }
+
+.formula-chip {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 13px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: var(--c5); padding: 8px 16px; border-radius: 6px;
+  margin: 8px 0;
+}
+
+.lcard-vis {
+  padding: 40px 36px;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 300px; position: relative;
+  overflow: hidden;
+}
+
+/* ── VIS: IMAGE ── */
+.pixel-grid-vis {
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.px-grid {
+  display: grid; gap: 1px;
+  border-radius: 8px; overflow: hidden;
+}
+.px-cell { border-radius: 0; }
+.px-label { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+
+/* ── VIS: CONV ── */
+.conv-stage {
+  display: flex; flex-direction: column; align-items: center; gap: 20px; width: 100%;
+}
+.conv-top { display: flex; align-items: flex-end; gap: 16px; justify-content: center; }
+.conv-img-wrap { position: relative; }
+.conv-canvas { display: block; border-radius: 8px; }
+.filter-box {
+  position: absolute;
+  border: 2px solid var(--c3);
+  border-radius: 3px;
+  box-shadow: 0 0 20px rgba(255,107,53,0.6), inset 0 0 10px rgba(255,107,53,0.1);
+  transition: top 0.25s ease, left 0.25s ease;
+  pointer-events: none;
+}
+.conv-arrow-h { font-size: 20px; color: var(--dim); align-self: center; }
+.feat-canvas { display: block; border-radius: 8px; }
+.conv-info {
+  font-family: var(--font-mono); font-size: 10px; color: var(--dim);
+  letter-spacing: 1px; text-align: center;
+}
+
+/* ── VIS: POOL ── */
+.pool-stage { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.pool-row { display: flex; align-items: center; gap: 20px; }
+.pool-canvas { border-radius: 8px; }
+.pool-info { font-family: var(--font-mono); font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+
+/* ── VIS: FLATTEN ── */
+.flatten-stage {
+  display: flex; align-items: center; gap: 24px; width: 100%;
+  justify-content: center;
+}
+.cube-wrapper { perspective: 400px; }
+.cube3d {
+  width: 100px; height: 100px;
+  transform-style: preserve-3d;
+  animation: cubeRotate 10s linear infinite;
+}
+@keyframes cubeRotate {
+  from { transform: rotateX(-25deg) rotateY(0); }
+  to { transform: rotateX(-25deg) rotateY(360deg); }
+}
+.cface {
+  position: absolute; width: 100px; height: 100px;
+  border: 1px solid rgba(168,85,247,0.3);
+  background: rgba(168,85,247,0.05);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono); font-size: 11px; color: var(--c2);
+}
+.cface.front  { transform: translateZ(50px); }
+.cface.back   { transform: rotateY(180deg) translateZ(50px); }
+.cface.right  { transform: rotateY(90deg) translateZ(50px); }
+.cface.left   { transform: rotateY(-90deg) translateZ(50px); }
+.cface.top    { transform: rotateX(90deg) translateZ(50px); }
+.cface.bottom { transform: rotateX(-90deg) translateZ(50px); }
+.flat-col { display: flex; flex-direction: column; gap: 2px; }
+.flat-bar {
+  width: 24px; border-radius: 2px;
+  animation: flatAnim 2s ease-in-out infinite;
+}
+@keyframes flatAnim { 0%,100%{opacity:.4} 50%{opacity:1} }
+.flatten-arrow { font-size: 28px; color: var(--dim); }
+
+/* ── VIS: DENSE ── */
+.dense-wrap { width: 100%; height: 260px; position: relative; }
+.dense-svg { width: 100%; height: 100%; }
+
+/* ── VIS: SOFTMAX ── */
+.softmax-wrap { width: 100%; }
+.sm-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.sm-label { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 80px; text-align: right; }
+.sm-track { flex: 1; height: 22px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+.sm-fill {
+  height: 100%; border-radius: 4px;
+  display: flex; align-items: center; padding-left: 8px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+  width: 0;
+}
+.sm-pct { font-family: var(--font-mono); font-size: 10px; width: 36px; }
+.sm-winner { font-family: var(--font-mono); font-size: 11px; color: var(--c4); margin-top: 12px; text-align: center; }
+
+/* ── PARAMS BREAKDOWN ── */
+.params-section {
+  padding: 0 40px 80px; max-width: 1200px; margin: 0 auto;
+}
+.params-big-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.params-top {
+  padding: 48px;
+  display: flex; align-items: center;
+  gap: 60px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.params-hero-num {
+  font-family: var(--font-display);
+  font-size: 72px; font-weight: 800;
+  letter-spacing: -3px;
+  background: linear-gradient(135deg, var(--c4), var(--c1));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.params-hero-label { font-family: var(--font-mono); font-size: 12px; color: var(--muted); letter-spacing: 2px; margin-top: 8px; }
+.params-bar-section { flex: 1; min-width: 300px; }
+.pbar-row { margin-bottom: 14px; }
+.pbar-meta { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.pbar-name { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.pbar-num { font-family: var(--font-mono); font-size: 11px; color: var(--text); }
+.pbar-track { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+.pbar-fill { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.4,0,0.2,1); width: 0; }
+
+/* ── QUIZ ── */
+.quiz-section { padding: 0 40px 100px; max-width: 1200px; margin: 0 auto; }
+.quiz-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.quiz-top {
+  padding: 40px 48px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.quiz-title { font-family: var(--font-display); font-size: 28px; font-weight: 700; }
+.quiz-counter { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.quiz-body { padding: 48px; }
+.quiz-q {
+  font-family: var(--font-display); font-size: 22px; font-weight: 600;
+  margin-bottom: 32px; line-height: 1.4;
+}
+.quiz-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+@media(max-width:600px) { .quiz-opts { grid-template-columns: 1fr; } }
+.quiz-opt {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 22px;
+  font-family: var(--font-body); font-size: 15px;
+  color: var(--text); cursor: none; text-align: left;
+  transition: all 0.25s; line-height: 1.4;
+}
+.quiz-opt:hover { border-color: var(--c1); background: rgba(0,212,255,0.05); transform: translateY(-2px); }
+.quiz-opt.correct { border-color: var(--c4); background: rgba(34,197,94,0.08); color: var(--c4); }
+.quiz-opt.wrong { border-color: #ef4444; background: rgba(239,68,68,0.08); color: #ef4444; }
+.quiz-fb {
+  display: none; padding: 18px 22px; border-radius: 10px;
+  font-size: 15px; line-height: 1.8; margin-bottom: 20px;
+}
+.quiz-fb.show { display: block; }
+.quiz-fb.ok { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--c4); }
+.quiz-fb.bad { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); color: #f87171; }
+.quiz-progress { display: flex; gap: 6px; margin-bottom: 32px; }
+.qp-dot { flex: 1; height: 3px; border-radius: 2px; background: var(--border2); transition: background 0.3s; }
+.qp-dot.done { background: var(--c4); }
+.qp-dot.active { background: var(--c1); }
+.quiz-next-btn {
+  display: none; font-family: var(--font-mono); font-size: 13px;
+  padding: 14px 32px; background: transparent;
+  border: 1px solid var(--c1); color: var(--c1);
+  border-radius: 6px; cursor: none; letter-spacing: 2px;
+  text-transform: uppercase; transition: all 0.3s;
+  position: relative; overflow: hidden;
+}
+.quiz-next-btn::before {
+  content: ''; position: absolute; inset: 0;
+  background: var(--c1); transform: scaleX(0);
+  transform-origin: left; transition: transform 0.3s; z-index: -1;
+}
+.quiz-next-btn:hover { color: var(--bg); }
+.quiz-next-btn:hover::before { transform: scaleX(1); }
+.quiz-next-btn.show { display: inline-block; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 40px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 20px;
+}
+.footer-logo { font-family: var(--font-mono); font-size: 14px; color: var(--c1); }
+.footer-info { font-family: var(--font-mono); font-size: 11px; color: var(--dim); letter-spacing: 1px; }
+
+/* ── SECTION HEADING ── */
+.sec-eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--c1); margin-bottom: 12px; }
+.sec-heading { font-family: var(--font-display); font-size: clamp(28px,4vw,48px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+.sec-sub { font-size: 16px; color: #d4d4f0; font-weight: 400; max-width: 500px; }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.in { opacity: 1; transform: translateY(0); }
+
+/* glow effects on layer cards */
+.lcard-icon::after {
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 20px; opacity: 0.3;
+  filter: blur(10px);
+  transition: opacity 0.3s;
+}
+.lcard:hover .lcard-icon::after { opacity: 0.6; }
+
+/* tags */
+.ltag {
+  display: inline-block;
+  font-family: var(--font-mono); font-size: 9px;
+  padding: 3px 9px; border-radius: 20px;
+  margin: 0 4px 6px 0; letter-spacing: 1px; text-transform: uppercase;
+}
+.ltag-relu { background: rgba(255,107,53,0.1); color: var(--c3); border: 1px solid rgba(255,107,53,0.2); }
+.ltag-pool { background: rgba(34,197,94,0.08); color: var(--c4); border: 1px solid rgba(34,197,94,0.2); }
+.ltag-none { background: rgba(112,112,160,0.1); color: var(--muted); border: 1px solid rgba(112,112,160,0.2); }
+.ltag-key  { background: rgba(0,212,255,0.08); color: var(--c1); border: 1px solid rgba(0,212,255,0.2); }
+
+/* highlight number */
+.num-hl { font-family: var(--font-mono); color: var(--c1); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- CURSOR -->
+<div class="cursor" id="cursor">
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+</div>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="nav-logo">CNN // VISUAL EXPLAINER</div>
+  <div class="nav-pills" id="navPills"></div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas class="hero-canvas" id="heroCanvas"></canvas>
+  <div class="hero-content">
+    <div class="hero-eyebrow">Deep Learning · Fashion MNIST · Layer by Layer</div>
+    <h1 class="hero-title">
+      <span class="line1">How Neural</span>
+      <span class="line2">Networks See</span>
+    </h1>
+    <p class="hero-sub">A cinematic walkthrough of every layer in a Convolutional Neural Network — from raw pixels to a confident prediction.</p>
+    <a href="#pipeline-section" class="hero-cta">Begin ↓</a>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>SCROLL</span>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline-section">
+  <div style="max-width:1200px;margin:0 auto;padding:0 40px 40px;">
+    <div class="sec-eyebrow reveal">The Architecture</div>
+    <div class="sec-heading reveal">8 layers, one prediction</div>
+  </div>
+  <div class="pipeline-track" id="pipelineTrack"></div>
+</section>
+
+<!-- LAYER CARDS -->
+<div style="padding:60px 0 0;" id="layerCardsWrap">
+  <div style="max-width:1200px;margin:0 auto;padding:0 40px 40px;">
+    <div class="sec-eyebrow reveal">Layer Deep-Dive</div>
+    <div class="sec-heading reveal">Click any layer to explore</div>
+  </div>
+  <div class="layer-section" id="layerSection"></div>
+</div>
+
+<!-- FILTER EXPLORER -->
+<div id="filterExplorerSection" style="max-width:1200px;margin:0 auto;padding:0 40px 80px;">
+  <div class="sec-eyebrow reveal" style="margin-bottom:12px">Conv Layer 1 · Deep Dive</div>
+  <div class="sec-heading reveal" style="margin-bottom:8px">Filter Explorer</div>
+  <p class="sec-sub reveal" style="margin-bottom:48px">Pick a filter type, drag the slider to move it across the image, and watch every calculation update live.</p>
+
+  <!-- HOW IT WORKS CARDS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:48px" class="reveal">
+    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--c3);border-radius:14px;padding:24px">
+      <div style="font-size:24px;margin-bottom:12px">🔢</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:8px">A filter = 9 numbers</div>
+      <div style="font-size:14px;color:#d4d4f0;line-height:1.7">Each 3×3 filter is just 9 learned weights. The network adjusts them during training so each filter fires on a different feature.</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);padding:7px 13px;border-radius:6px;margin-top:12px;display:inline-block;letter-spacing:1px">3×3×1 = 9 weights + 1 bias</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--c1);border-radius:14px;padding:24px">
+      <div style="font-size:24px;margin-bottom:12px">📐</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:8px">Dot product = score</div>
+      <div style="font-size:14px;color:#d4d4f0;line-height:1.7">Multiply each of the 9 weights by the pixel beneath it, sum them all up. High result = this patch matches what the filter is looking for.</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);padding:7px 13px;border-radius:6px;margin-top:12px;display:inline-block;letter-spacing:1px">output = Σ(weight × pixel) + bias</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--c2);border-radius:14px;padding:24px">
+      <div style="font-size:24px;margin-bottom:12px">🗺</div>
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;margin-bottom:8px">One filter → one map</div>
+      <div style="font-size:14px;color:#d4d4f0;line-height:1.7">After sliding to every valid position, each dot product becomes one pixel. 26×26 positions = a 26×26 feature map showing where the filter fired.</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);padding:7px 13px;border-radius:6px;margin-top:12px;display:inline-block;letter-spacing:1px">26×26 positions → 26×26 feature map</div>
+    </div>
+  </div>
+
+  <!-- MAIN INTERACTIVE DEMO -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden" class="reveal">
+    <div style="padding:32px 40px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:800">Live Convolution</div>
+        <div style="font-size:14px;color:var(--muted);margin-top:4px">Choose a filter · drag the slider · watch the maths</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:10px;padding:6px 14px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.25);color:var(--c3);border-radius:20px;letter-spacing:1px">64 FILTERS · 3×3 KERNEL</div>
+    </div>
+    <div style="padding:32px 40px">
+
+      <!-- Filter selector -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px" id="feFilterSelector"></div>
+
+      <!-- 3-col layout -->
+      <div style="display:grid;grid-template-columns:1fr 40px 1fr 40px 200px;gap:0;align-items:center;margin-bottom:32px" id="feDemoGrid">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px">INPUT PATCH (3×3)</div>
+          <div style="border-radius:10px;overflow:hidden;border:1px solid var(--border2)"><canvas id="feInputPatch" width="162" height="162"></canvas></div>
+          <div id="fePatchPos" style="font-family:var(--font-mono);font-size:11px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);padding:5px 12px;border-radius:14px">Position: (0, 0)</div>
+        </div>
+        <div style="text-align:center;font-size:20px;color:var(--dim)">✕</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px">FILTER WEIGHTS (3×3)</div>
+          <div id="feFilterGrid" style="display:flex;flex-direction:column;gap:4px"></div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px">Orange = positive · Blue = negative</div>
+        </div>
+        <div style="text-align:center;font-size:20px;color:var(--dim)">=</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px">OUTPUT (after ReLU)</div>
+          <div id="feOutputCircle" style="width:76px;height:76px;border-radius:50%;border:3px solid rgba(255,107,53,0.4);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--c3);background:rgba(255,107,53,0.05);transition:all .4s">0.00</div>
+          <div id="feReluBadge" style="font-family:var(--font-mono);font-size:10px;padding:4px 12px;border-radius:12px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--c4);transition:all .3s">ACTIVE</div>
+        </div>
+      </div>
+
+      <!-- Computation breakdown -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:24px">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:14px">COMPUTATION BREAKDOWN</div>
+        <div id="feCompEq" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-family:var(--font-mono);font-size:13px"></div>
+      </div>
+
+      <!-- Position slider + image -->
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <label style="font-family:var(--font-mono);font-size:11px;color:var(--muted);letter-spacing:1px;white-space:nowrap">SLIDE FILTER:</label>
+        <input type="range" min="0" max="625" value="0" id="feSlider" oninput="feUpdatePos(this.value)"
+          style="-webkit-appearance:none;appearance:none;flex:1;min-width:120px;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:none">
+        <span id="fePosLabel" style="font-family:var(--font-mono);font-size:12px;color:var(--c3);min-width:60px;text-align:right">(0, 0)</span>
+      </div>
+      <canvas id="feFullImage" width="280" height="280" style="border-radius:10px;border:1px solid var(--border2);display:block;margin:12px auto 4px"></canvas>
+      <div style="text-align:center;font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px">ORANGE BOX = CURRENT FILTER POSITION</div>
+    </div>
+  </div>
+
+  <!-- FEATURE MAPS -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;overflow:hidden;margin-top:24px" class="reveal">
+    <div style="padding:28px 40px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-family:var(--font-display);font-size:20px;font-weight:800">Feature Maps — All 64 Filters</div>
+        <div style="font-size:14px;color:var(--muted);margin-top:4px">Each thumbnail = one filter's response to the whole image. Click to inspect.</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:10px;padding:6px 14px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--c1);border-radius:20px;letter-spacing:1px">OUTPUT: 26×26×64</div>
+    </div>
+    <div style="padding:28px 40px">
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:16px">CLICK ANY FILTER TO INSPECT</div>
+      <div id="feFmapStrip" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"></div>
+      <div id="feFmapDetail" style="display:none;margin-top:20px;padding:20px;background:var(--bg2);border:1px solid var(--border);border-radius:12px">
+        <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap">
+          <canvas id="feFmapBig" width="130" height="130" style="border-radius:8px;border:1px solid rgba(255,107,53,0.3);flex-shrink:0"></canvas>
+          <div style="flex:1;min-width:200px">
+            <div id="feFmapName" style="font-family:var(--font-mono);font-size:11px;color:var(--c3);letter-spacing:2px;margin-bottom:8px"></div>
+            <div id="feFmapDesc" style="font-size:14px;color:#d4d4f0;line-height:1.7;max-width:500px"></div>
+            <div id="feFmapFormula" style="font-family:var(--font-mono);font-size:11px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.15);padding:6px 14px;border-radius:14px;display:inline-block;letter-spacing:1px;margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OUTPUT SIZE EXPLAINER -->
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px 40px;margin-top:24px" class="reveal">
+    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--c1);margin-bottom:10px">Why does the output shrink?</div>
+    <div style="font-family:var(--font-display);font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:10px">28×28 → 26×26</div>
+    <p style="font-size:15px;color:#d4d4f0;line-height:1.75;max-width:620px;margin-bottom:24px">A 3×3 filter can't be centred on an edge pixel — there are no neighbours on that side. So the filter only covers positions from (1,1) to (26,26), giving 26 valid positions per row and column.</p>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px">
+      <div style="text-align:center">
+        <div style="width:100px;height:100px;background:rgba(168,85,247,0.12);border:2px solid rgba(168,85,247,0.4);border-radius:8px;margin:0 auto 8px"></div>
+        <div style="font-family:var(--font-mono);font-size:13px">28 × 28</div>
+        <div style="font-size:12px;color:var(--muted)">Input</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:18px;color:var(--dim)">−</div>
+      <div style="text-align:center">
+        <div style="width:28px;height:28px;background:rgba(255,107,53,0.15);border:2px solid rgba(255,107,53,0.4);border-radius:4px;margin:0 auto 8px"></div>
+        <div style="font-family:var(--font-mono);font-size:13px">3 × 3</div>
+        <div style="font-size:12px;color:var(--muted)">Kernel</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:18px;color:var(--dim)">+ 1 =</div>
+      <div style="text-align:center">
+        <div style="width:92px;height:92px;background:rgba(0,212,255,0.08);border:2px solid rgba(0,212,255,0.35);border-radius:8px;margin:0 auto 8px"></div>
+        <div style="font-family:var(--font-mono);font-size:13px">26 × 26</div>
+        <div style="font-size:12px;color:var(--muted)">Per filter</div>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:18px;color:var(--dim)">× 64 =</div>
+      <div style="text-align:center">
+        <div style="display:flex;gap:2px;margin:0 auto 8px;justify-content:center">${Array.from({length:5},(_,i)=>`<div style="width:12px;height:92px;border-radius:3px;background:rgba(255,107,53,${0.08+i*0.05});border:1px solid rgba(255,107,53,0.2)"></div>`).join('')}<div style="font-family:var(--font-mono);font-size:12px;color:var(--dim);align-self:center;padding-left:3px">…</div></div>
+        <div style="font-family:var(--font-mono);font-size:13px">26×26×64</div>
+        <div style="font-size:12px;color:var(--muted)">Output volume</div>
+      </div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--c1);background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.12);padding:9px 18px;border-radius:20px;display:inline-block;letter-spacing:1px">output_size = (28 − 3 + 1) = 26</div>
+    <div style="margin-top:16px;padding:14px 18px;border-radius:8px;background:rgba(0,212,255,0.06);border-left:3px solid var(--c1);font-size:15px;color:#e8e8fc;line-height:1.75;max-width:600px">
+      <strong>Total output:</strong> 26 × 26 × 64 = <span style="font-family:var(--font-mono);color:var(--c1);font-weight:700">43,264</span> numbers — one per filter at every spatial position. Each answers: <em>"how strongly did this filter fire here?"</em>
+    </div>
+  </div>
+
+  <!-- WHAT FILTERS LEARN -->
+  <div style="margin-top:24px" class="reveal">
+    <div style="font-family:var(--font-mono);font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--c1);margin-bottom:10px">What the 64 filters actually learn</div>
+    <div style="font-family:var(--font-display);font-size:clamp(22px,3vw,32px);font-weight:800;letter-spacing:-1px;margin-bottom:10px">Each filter = one feature detector</div>
+    <p style="font-size:15px;color:#d4d4f0;line-height:1.75;max-width:620px;margin-bottom:24px">The network never manually programs these patterns. Through training on thousands of labelled images, each filter independently specialises into a different low-level visual detector.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px" id="feLearnGrid"></div>
+    <div style="margin-top:20px;padding:14px 18px;border-radius:8px;background:rgba(255,107,53,0.07);border-left:3px solid var(--c3);font-size:15px;color:#e8e8fc;line-height:1.75;max-width:700px">
+      <strong>Important:</strong> With 64 filters learning independently, the network discovers an efficient vocabulary of low-level features that together give the richest description of the image for the task at hand.
+    </div>
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--c5);background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2);padding:8px 16px;border-radius:6px;display:inline-block;margin-top:14px;letter-spacing:1px">640 params = (3×3×1 + 1 bias) × 64 filters = 10 × 64</div>
+  </div>
+</div>
+
+<!-- FILTER EXPLORER SCRIPTS -->
+<script>
+(function(){
+const FE_FILTERS=[
+  {name:'Horizontal Edge',short:'H-EDGE',weights:[[-1,-1,-1],[0,0,0],[1,1,1]],desc:'Fires on dark-top to bright-bottom transitions. Detects horizontal seams, hemlines, and the top rim of the shoe sole.'},
+  {name:'Vertical Edge',short:'V-EDGE',weights:[[-1,0,1],[-1,0,1],[-1,0,1]],desc:'Fires on left-dark to right-light boundaries. Picks up the side silhouette of boots, trouser legs, and vertical collar lines.'},
+  {name:'Diagonal 45°',short:'DIAG',weights:[[-1,-1,0],[-1,0,1],[0,1,1]],desc:'Sensitive to 45-degree contrast transitions. Picks up diagonal seams, angled lacing, and folded fabric creases.'},
+  {name:'Blob / Centre',short:'BLOB',weights:[[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],desc:'Bright centre, dark surround — fires on small bright spots. Detects buttons, eyelets, press-studs.'},
+  {name:'Gradient',short:'GRAD',weights:[[0,0,0],[0,.5,.5],[0,-.5,-.5]],desc:'Reacts to smooth brightness ramps — shading on curved surfaces like the rounded toe-cap of a shoe.'},
+  {name:'Sharpen',short:'SHARP',weights:[[0,-1,0],[-1,5,-1],[0,-1,0]],desc:'Amplifies fine texture — knit patterns, fabric weave, lace, and any high-frequency pixel variation.'},
+];
+const FMAP_INFO=[
+  {name:'HORIZONTAL EDGE',desc:'Strong activation along the top rim of the shoe sole and collar opening. Shows every horizontal dark-to-bright boundary.',formula:'filter = [[-1,-1,-1],[0,0,0],[1,1,1]]'},
+  {name:'VERTICAL EDGE',desc:'Activates on left-dark-to-right-light boundaries. The shoe silhouette edges show up strongly.',formula:'filter = [[-1,0,1],[-1,0,1],[-1,0,1]]'},
+  {name:'DIAGONAL',desc:'Bright on 45-degree contrast transitions. Highlights angled stitching, lacing, and the diagonal shoe toe-upper junction.',formula:'filter = [[-1,-1,0],[-1,0,1],[0,1,1]]'},
+  {name:'BLOB DETECTOR',desc:'Fires on small bright spots surrounded by dark. Highlights eyelets, buttons, toe-cap edges, and press-studs.',formula:'filter = centre-surround (Laplacian)'},
+  {name:'GRADIENT',desc:'Responds to smooth brightness ramps — the rounded toe-cap shading and gradual darkening toward the sole edge.',formula:'filter = smooth ramp detector'},
+  {name:'SHARPEN',desc:'Amplifies fine pixel-level texture. Reveals knit patterns, fabric weave, and fine lacing detail.',formula:'filter = [[0,-1,0],[-1,5,-1],[0,-1,0]]'},
+];
+const LEARN_ITEMS=[
+  {id:'fel1',weights:[[-1,-1,-1],[0,0,0],[1,1,1]],name:'Horizontal edge',desc:'Detects top rim of bag, hemlines, horizontal seams.'},
+  {id:'fel2',weights:[[-1,0,1],[-1,0,1],[-1,0,1]],name:'Vertical edge',desc:'Fires on boot silhouette, trouser legs, collar edges.'},
+  {id:'fel3',weights:[[-1,-1,0],[-1,0,1],[0,1,1]],name:'Diagonal (45°)',desc:'Picks up angled seams, lacing, folded fabric creases.'},
+  {id:'fel4',weights:[[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],name:'Blob detector',desc:'Detects buttons, eyelets, toe-caps, circular stitching.'},
+  {id:'fel5',weights:[[0,0,0],[0,.5,.5],[0,-.5,-.5]],name:'Texture gradient',desc:'Shading on curved surfaces like shoe soles, bag sides.'},
+  {id:'fel6',weights:[[0,-1,0],[-1,5,-1],[0,-1,0]],name:'Fine texture',desc:'Captures knit patterns, fabric weave, lace detail.'},
+];
+
+// Fake 28×28 image
+const IMG=[];
+for(let r=0;r<28;r++){IMG[r]=[];for(let c=0;c<28;c++){
+  let v=0.1;
+  if(r>=22&&r<=26) v=0.85;
+  if(r>=8&&r<=21&&c>=4&&c<=23) v=0.55+Math.sin(r*.8)*.1+Math.sin(c*.6)*.08;
+  if(r>=10&&r<=18&&c>=3&&c<=10) v=0.75+Math.random()*.1;
+  if(r>=8&&r<=12&&c>=16&&c<=22) v=0.15+Math.random()*.05;
+  if(r>=11&&r<=17&&c>=11&&c<=20&&((r+c)%3===0)) v=0.9;
+  v=Math.min(1,Math.max(0,v+(Math.random()-.5)*.04));
+  IMG[r][c]=v;
+}}
+
+let feCurFilter=0, feCurRow=0, feCurCol=0;
+
+function feDrawFullImage(hr,hc){
+  const cv=document.getElementById('feFullImage');if(!cv)return;
+  const ctx=cv.getContext('2d'),ps=cv.width/28;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(let r=0;r<28;r++)for(let c=0;c<28;c++){const v=Math.round(IMG[r][c]*255);ctx.fillStyle=`rgb(${v},${v},${v})`;ctx.fillRect(c*ps,r*ps,ps,ps);}
+  ctx.strokeStyle='rgba(255,107,53,0.95)';ctx.lineWidth=2.5;
+  ctx.strokeRect(hc*ps-1,hr*ps-1,ps*3+2,ps*3+2);
+  ctx.fillStyle='rgba(255,107,53,0.15)';ctx.fillRect(hc*ps,hr*ps,ps*3,ps*3);
+}
+
+function feDrawInputPatch(r,c){
+  const cv=document.getElementById('feInputPatch');if(!cv)return;
+  const ctx=cv.getContext('2d'),cw=162,ps=54;ctx.clearRect(0,0,cw,cw);
+  for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++){
+    const v=IMG[r+dr]?.[c+dc]??0,pv=Math.round(v*255);
+    ctx.fillStyle=`rgb(${pv},${pv},${pv})`;ctx.fillRect(dc*ps,dr*ps,ps,ps);
+    ctx.fillStyle=v>0.5?'rgba(0,0,0,0.75)':'rgba(255,255,255,0.9)';
+    ctx.font=`bold ${Math.round(ps*.26)}px "Syne Mono",monospace`;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(v.toFixed(2),dc*ps+ps/2,dr*ps+ps/2);
+  }
+  ctx.strokeStyle='rgba(255,107,53,0.35)';ctx.lineWidth=1;
+  for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(i*ps,0);ctx.lineTo(i*ps,cw);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*ps);ctx.lineTo(cw,i*ps);ctx.stroke();}
+}
+
+function feDrawFilterGrid(fi){
+  const grid=document.getElementById('feFilterGrid');if(!grid)return;
+  grid.innerHTML='';
+  const w=FE_FILTERS[fi].weights,flat=w.flat(),maxA=Math.max(...flat.map(Math.abs),0.001);
+  for(let dr=0;dr<3;dr++){
+    const row=document.createElement('div');row.style.cssText='display:flex;gap:4px';
+    for(let dc=0;dc<3;dc++){
+      const wv=w[dr][dc],intensity=Math.abs(wv)/maxA;
+      const cell=document.createElement('div');
+      cell.style.cssText=`width:48px;height:48px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;transition:all .4s;border:1px solid;`;
+      if(wv>=0){const r2=Math.round(80+175*intensity),g2=Math.round(50+85*intensity),b2=Math.round(20*intensity);cell.style.background=`rgba(${r2},${g2},${b2},${0.15+intensity*.55})`;cell.style.borderColor=`rgba(${r2},${g2},${b2},${0.3+intensity*.3})`;cell.style.color=intensity>.4?'#ffb380':'var(--muted)';}
+      else{const rr=Math.round(40*intensity),gg=Math.round(100*intensity),bb=Math.round(150+100*intensity);cell.style.background=`rgba(${rr},${gg},${bb},${0.15+intensity*.55})`;cell.style.borderColor=`rgba(${rr},${gg},${bb},${0.3+intensity*.3})`;cell.style.color=intensity>.4?'#80c8ff':'var(--muted)';}
+      cell.textContent=wv.toFixed(2);row.appendChild(cell);
+    }
+    grid.appendChild(row);
+  }
+}
+
+function feUpdateComp(fi,r,c){
+  const w=FE_FILTERS[fi].weights;let rawSum=0;const pairs=[];
+  for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++){const wv=w[dr][dc],p=IMG[r+dr]?.[c+dc]??0;rawSum+=wv*p;pairs.push({wv,p});}
+  const relu=Math.max(0,rawSum);
+  const eq=document.getElementById('feCompEq');if(!eq)return;eq.innerHTML='';
+  pairs.slice(0,3).forEach((pair,i)=>{
+    if(i>0){const op=document.createElement('span');op.style.color='var(--muted)';op.textContent='+';eq.appendChild(op);}
+    const wColor=pair.wv>=0?'rgba(255,107,53,0.15)':'rgba(0,150,255,0.15)';
+    const wBorder=pair.wv>=0?'rgba(255,107,53,0.4)':'rgba(0,150,255,0.4)';
+    const wTextColor=pair.wv>=0?'var(--c3)':'var(--c1)';
+    const t=document.createElement('div');t.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+    t.innerHTML=`<div style="padding:5px 10px;border-radius:6px;background:${wColor};border:1px solid ${wBorder};color:${wTextColor};font-size:12px;font-weight:700">${pair.wv.toFixed(2)}</div><div style="font-size:9px;color:var(--muted);letter-spacing:1px">w</div>`;
+    eq.appendChild(t);
+    const x=document.createElement('span');x.style.color='var(--muted)';x.textContent='×';eq.appendChild(x);
+    const pt=document.createElement('div');pt.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+    pt.innerHTML=`<div style="padding:5px 10px;border-radius:6px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);color:var(--c2);font-size:12px;font-weight:700">${pair.p.toFixed(2)}</div><div style="font-size:9px;color:var(--muted);letter-spacing:1px">px</div>`;
+    eq.appendChild(pt);
+  });
+  const ell=document.createElement('span');ell.style.color='var(--muted)';ell.textContent='+ … = ';eq.appendChild(ell);
+  const raw=document.createElement('div');raw.style.cssText='display:flex;flex-direction:column;align-items:center;gap:3px';
+  raw.innerHTML=`<div style="padding:5px 10px;border-radius:6px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:var(--c5);font-size:12px;font-weight:700">${rawSum.toFixed(2)}</div><div style="font-size:9px;color:var(--muted);letter-spacing:1px">raw</div>`;
+  eq.appendChild(raw);
+  const arr=document.createElement('span');arr.style.color='var(--muted)';arr.textContent='→ ReLU →';eq.appendChild(arr);
+  const res=document.createElement('div');res.style.cssText=`font-family:var(--font-mono);font-size:20px;font-weight:700;padding:10px 20px;background:rgba(255,107,53,0.1);border:2px solid rgba(255,107,53,0.4);border-radius:10px;color:var(--c3)`;res.textContent=relu.toFixed(2);eq.appendChild(res);
+
+  const norm=Math.min(1,relu/3);
+  const oc=document.getElementById('feOutputCircle');if(oc){oc.textContent=relu.toFixed(2);oc.style.background=`rgba(255,${Math.round(107*norm)},${Math.round(53*norm)},${0.05+norm*.25})`;oc.style.borderColor=`rgba(255,${Math.round(107*norm)},${Math.round(53*norm)},${0.3+norm*.5})`;}
+  const rb=document.getElementById('feReluBadge');if(rb){rb.textContent=relu>0?'ACTIVE':'DEAD (0)';rb.style.background=relu>0?'rgba(34,197,94,0.08)':'rgba(112,112,160,0.08)';rb.style.borderColor=relu>0?'rgba(34,197,94,0.2)':'rgba(112,112,160,0.2)';rb.style.color=relu>0?'var(--c4)':'var(--muted)';}
+}
+
+window.feUpdatePos=function(val){
+  const v=parseInt(val);const r=Math.floor(v/26),c=v%26;
+  feCurRow=r;feCurCol=c;
+  document.getElementById('fePosLabel').textContent=`(${r}, ${c})`;
+  document.getElementById('fePatchPos').textContent=`Position: (${r}, ${c})`;
+  feDrawInputPatch(r,c);feDrawFullImage(r,c);feUpdateComp(feCurFilter,r,c);
+};
+
+function feComputeMap(w){
+  const map=[];
+  for(let r=0;r<=25;r++){map[r]=[];for(let c=0;c<=25;c++){let s=0;for(let dr=0;dr<3;dr++)for(let dc=0;dc<3;dc++)s+=w[dr][dc]*(IMG[r+dr]?.[c+dc]??0);map[r][c]=Math.max(0,s);}}
+  return map;
+}
+function feDrawMap(canvas,w,size){
+  const ctx=canvas.getContext('2d'),map=feComputeMap(w);
+  let maxV=0;map.forEach(row=>row.forEach(v=>{if(v>maxV)maxV=v;}));if(maxV===0)maxV=1;
+  const ps=size/26;
+  for(let r=0;r<=25;r++)for(let c=0;c<=25;c++){const n=map[r][c]/maxV;ctx.fillStyle=`rgb(${Math.round(n*255)},${Math.round(n*107)},${Math.round(n*53)})`;ctx.fillRect(c*ps,r*ps,ps,ps);}
+}
+function feDrawFilterVis(canvas,w){
+  const ctx=canvas.getContext('2d'),flat=w.flat(),maxA=Math.max(...flat.map(Math.abs),0.001),ps=20;
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const wv=w[r][c],n=Math.abs(wv)/maxA;if(wv>=0)ctx.fillStyle=`rgba(255,${Math.round(107*(1-n)+200*n)},${Math.round(53*(1-n))},${0.15+n*.7})`;else ctx.fillStyle=`rgba(${Math.round(40*n)},${Math.round(80+170*n)},${Math.round(160+95*n)},${0.15+n*.7})`;ctx.fillRect(c*ps,r*ps,ps,ps);}
+  ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=.5;
+  for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(i*ps,0);ctx.lineTo(i*ps,60);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*ps);ctx.lineTo(60,i*ps);ctx.stroke();}
+}
+
+// Build filter selector
+const sel=document.getElementById('feFilterSelector');if(sel){
+  FE_FILTERS.forEach((f,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=f.short;
+    btn.style.cssText=`font-family:var(--font-mono);font-size:11px;padding:7px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:none;transition:all .25s;letter-spacing:1px;text-transform:uppercase`;
+    if(i===0){btn.style.borderColor='var(--c3)';btn.style.color='var(--c3)';btn.style.background='rgba(255,107,53,0.1)';}
+    btn.addEventListener('click',()=>{
+      sel.querySelectorAll('button').forEach((b,j)=>{b.style.borderColor=j===i?'var(--c3)':'var(--border2)';b.style.color=j===i?'var(--c3)':'var(--muted)';b.style.background=j===i?'rgba(255,107,53,0.1)':'transparent';});
+      feCurFilter=i;feDrawFilterGrid(i);feUpdateComp(i,feCurRow,feCurCol);
+    });
+    sel.appendChild(btn);
+  });
+}
+
+// Build fmap strip
+const strip=document.getElementById('feFmapStrip');if(strip){
+  const extraFilters=[[[-1,-1,0],[-1,0,1],[0,1,1]],[[1,1,1],[1,1,1],[1,1,1]]];
+  const allFilters=[...FE_FILTERS.map(f=>f.weights),...extraFilters,...Array.from({length:12},()=>Array.from({length:3},()=>Array.from({length:3},()=>(Math.random()-.5)*2)))];
+  allFilters.slice(0,20).forEach((w,i)=>{
+    const item=document.createElement('div');item.style.cssText='display:flex;flex-direction:column;align-items:center;gap:6px;cursor:none;transition:transform .2s';
+    item.addEventListener('mouseenter',()=>{item.style.transform='scale(1.1)';});item.addEventListener('mouseleave',()=>{item.style.transform='';});
+    const cv=document.createElement('canvas');cv.width=cv.height=48;cv.style.cssText='border-radius:6px;border:1px solid var(--border2);display:block;transition:border-color .3s';
+    feDrawMap(cv,w,48);
+    const tag=document.createElement('div');tag.style.cssText='font-family:var(--font-mono);font-size:9px;color:var(--dim);letter-spacing:1px';tag.textContent='F-'+(i+1).toString().padStart(2,'0');
+    item.appendChild(cv);item.appendChild(tag);
+    item.addEventListener('click',()=>{
+      strip.querySelectorAll('canvas').forEach(c2=>c2.style.borderColor='var(--border2)');cv.style.borderColor='var(--c3)';cv.style.boxShadow='0 0 10px rgba(255,107,53,0.3)';
+      const det=document.getElementById('feFmapDetail');if(!det)return;det.style.display='block';
+      const big=document.getElementById('feFmapBig');if(big)feDrawMap(big,w,130);
+      const info=FMAP_INFO[i]||{name:'FILTER F-'+(i+1),desc:'A learned feature detector. During training, random noise gradually specialises into a reliable pattern detector through thousands of backpropagation updates.',formula:'3×3×1 = 9 learned weights + 1 bias'};
+      const nm=document.getElementById('feFmapName');if(nm)nm.textContent=info.name;
+      const ds=document.getElementById('feFmapDesc');if(ds)ds.textContent=info.desc;
+      const fm=document.getElementById('feFmapFormula');if(fm)fm.textContent=info.formula;
+      det.scrollIntoView({behavior:'smooth',block:'nearest'});
+    });
+    strip.appendChild(item);
+  });
+  const more=document.createElement('div');more.style.cssText='display:flex;align-items:center;font-family:var(--font-mono);font-size:10px;color:var(--dim);letter-spacing:1px;padding:0 8px';more.textContent='… +44 more';strip.appendChild(more);
+}
+
+// Build learn grid
+const lg=document.getElementById('feLearnGrid');if(lg){
+  LEARN_ITEMS.forEach(item=>{
+    const card=document.createElement('div');card.style.cssText='background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:18px;transition:all .3s;cursor:none';
+    card.addEventListener('mouseenter',()=>{card.style.borderColor='rgba(255,107,53,0.3)';card.style.transform='translateY(-2px)';});card.addEventListener('mouseleave',()=>{card.style.borderColor='var(--border)';card.style.transform='';});
+    const cv=document.createElement('canvas');cv.width=cv.height=60;cv.style.cssText='border-radius:6px;display:block;margin:0 auto 12px';
+    feDrawFilterVis(cv,item.weights);
+    card.innerHTML='';card.appendChild(cv);
+    card.innerHTML+=`<div style="font-family:var(--font-mono);font-size:10px;color:var(--c3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;text-align:center">${item.name}</div><div style="font-size:13px;color:#b8b8d8;line-height:1.6;text-align:center">${item.desc}</div>`;
+    lg.appendChild(card);
+  });
+}
+
+// Init
+feDrawFilterGrid(0);feDrawFullImage(0,0);feDrawInputPatch(0,0);feUpdateComp(0,0,0);
+})();
+</script>
+
+<!-- PARAMS -->
+<div class="params-section reveal">
+  <div class="sec-eyebrow" style="padding-left:0;margin-bottom:12px">Parameter Count</div>
+  <div class="params-big-card">
+    <div class="params-top">
+      <div>
+        <div class="params-hero-num" id="bigCounter">0</div>
+        <div class="params-hero-label">TOTAL TRAINABLE PARAMETERS</div>
+      </div>
+      <div class="params-bar-section" id="paramsBarSection"></div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="quiz-section reveal">
+  <div class="sec-eyebrow" style="margin-bottom:12px">Test Your Understanding</div>
+  <div class="quiz-wrap">
+    <div class="quiz-top">
+      <div class="quiz-title">Quick-fire Questions</div>
+      <div class="quiz-counter" id="quizCounter">1 / 6</div>
+    </div>
+    <div class="quiz-body">
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-q" id="quizQ"></div>
+      <div class="quiz-opts" id="quizOpts"></div>
+      <div class="quiz-fb" id="quizFb"></div>
+      <button class="quiz-next-btn" id="quizNextBtn" onclick="nextQ()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">CNN // VISUAL</div>
+  <div class="footer-info">42028 DEEP LEARNING · UTS · EVERY PIXEL TELLS A STORY</div>
+</footer>
+
+<script>
+// ── CURSOR ──────────────────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx=0, my=0, rx=0, ry=0;
+document.addEventListener('mousemove', e => { mx=e.clientX; my=e.clientY; });
+function animCursor() {
+  rx += (mx-rx)*0.12; ry += (my-ry)*0.12;
+  cursor.style.left = mx+'px'; cursor.style.top = my+'px';
+  ring.style.left = (rx-mx)+'px'; ring.style.top = (ry-my)+'px';
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+document.querySelectorAll('a,button,.p-node,.lcard-header,.quiz-opt').forEach(el => {
+  el.addEventListener('mouseenter', ()=>{ ring.style.width='48px'; ring.style.height='48px'; ring.style.borderColor='rgba(0,212,255,0.7)'; });
+  el.addEventListener('mouseleave', ()=>{ ring.style.width='32px'; ring.style.height='32px'; ring.style.borderColor='rgba(0,212,255,0.4)'; });
+});
+
+// ── HERO CANVAS ──────────────────────────────────────────────────────
+const hc = document.getElementById('heroCanvas');
+const ctx = hc.getContext('2d');
+let W,H,particles=[];
+function resizeHC() { W=hc.width=window.innerWidth; H=hc.height=window.innerHeight; }
+resizeHC(); window.addEventListener('resize', resizeHC);
+for(let i=0;i<80;i++) particles.push({
+  x:Math.random()*1920, y:Math.random()*1080,
+  vx:(Math.random()-.5)*0.3, vy:(Math.random()-.5)*0.3,
+  r: Math.random()*1.5+0.5, a: Math.random()
+});
+function drawHero() {
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle = 'rgba(0,212,255,0.04)';
+  ctx.lineWidth = 1;
+  const gs = 80;
+  for(let x=0;x<W+gs;x+=gs){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<H+gs;y+=gs){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+  // particles
+  particles.forEach(p => {
+    p.x += p.vx; p.y += p.vy;
+    if(p.x<0) p.x=W; if(p.x>W) p.x=0;
+    if(p.y<0) p.y=H; if(p.y>H) p.y=0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(0,212,255,${p.a*0.4})`;
+    ctx.fill();
+  });
+  // connections
+  particles.forEach((p,i) => {
+    particles.slice(i+1).forEach(q => {
+      const d = Math.hypot(p.x-q.x, p.y-q.y);
+      if(d<120) {
+        ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y);
+        ctx.strokeStyle = `rgba(0,212,255,${(1-d/120)*0.06})`; ctx.lineWidth=0.5;
+        ctx.stroke();
+      }
+    });
+  });
+  requestAnimationFrame(drawHero);
+}
+drawHero();
+
+// ── DATA ─────────────────────────────────────────────────────────────
+const layers = [
+  { id:'input', icon:'🖼', color:'#a855f7', bg:'rgba(168,85,247,0.12)',
+    type:'INPUT', name:'Image Input', code:'Input(28, 28, 1)',
+    shapeIn:'28×28×1', shapeOut:'28×28×1', params:0,
+    tags:['key'],
+    vis:'image',
+    explain:`<div class="explain-title">Your image enters the network</div>
+    <p class="explain-body">A Fashion MNIST image is a <span class="num-hl">28×28</span> grid of pixels. Since it's grayscale, each pixel has just <span class="num-hl">1</span> channel — a single brightness value.</p>
+    <div class="callout callout-purple">Before feeding into the network, pixel values are <strong>divided by 255</strong> — scaling from 0–255 down to 0.0–1.0. This normalisation makes training faster and more stable.</div>
+    <p class="explain-body">The shape notation <span class="num-hl">(28, 28, 1)</span> means: 28 height × 28 width × 1 channel. A colour image would be (28, 28, 3) for RGB.</p>
+    <div class="formula-chip">pixel ÷ 255 → range [0.0 … 1.0]</div>` },
+
+  { id:'conv1', icon:'🔍', color:'#ff6b35', bg:'rgba(255,107,53,0.12)',
+    type:'CONV LAYER 1', name:'Conv2D', code:'Conv2D(64, (3,3), activation="relu")',
+    shapeIn:'28×28×1', shapeOut:'26×26×64', params:640,
+    tags:['relu','key'],
+    vis:'conv',
+    explain:`<div class="explain-title">Scanning for features</div>
+    <p class="explain-body">A <span class="num-hl">3×3 filter</span> (like a magnifying glass) slides across the entire image. At each position it computes a <strong>dot product</strong> — multiplying its 9 weights against the 9 pixels beneath it, then summing.</p>
+    <div class="callout callout-orange">We run <strong>64 different filters</strong> in parallel. Each filter learns a different feature: one detects horizontal edges, another vertical ones, another diagonal curves. The output is 64 feature maps stacked up.</div>
+    <p class="explain-body">The filter can't hang off the edges, so output shrinks: <span class="num-hl">28 − 3 + 1 = 26</span>. Output shape: 26×26×64.</p>
+    <div class="formula-chip">(3×3×1 + 1 bias) × 64 filters = 640 params</div>
+    <div style="margin-top:24px">
+      <button onclick="document.getElementById('filterExplorerSection').scrollIntoView({behavior:'smooth',block:'start'})" style="font-family:var(--font-mono);font-size:12px;padding:10px 22px;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.35);color:var(--c3);border-radius:6px;cursor:none;letter-spacing:1px;text-transform:uppercase;transition:all .25s;">
+        🔬 Open Filter Explorer ↓
+      </button>
+    </div>` },
+
+  { id:'pool1', icon:'⬇', color:'#22c55e', bg:'rgba(34,197,94,0.1)',
+    type:'POOLING 1', name:'MaxPooling2D', code:'MaxPooling2D(2, 2)',
+    shapeIn:'26×26×64', shapeOut:'13×13×64', params:0,
+    tags:['pool','none'],
+    vis:'pool',
+    explain:`<div class="explain-title">Shrinking without losing the plot</div>
+    <p class="explain-body">MaxPooling divides each feature map into <span class="num-hl">2×2 blocks</span> and keeps only the <strong>maximum value</strong> from each block. Width and height halve, depth stays the same.</p>
+    <div class="callout callout-green"><strong>26×26 → 13×13.</strong> We throw away 75% of the data — but we keep the strongest signal. If a feature was detected anywhere in a 2×2 region, the max captures it.</div>
+    <p class="explain-body">This also gives <strong>translation invariance</strong> — if a feature shifts 1 pixel, the max in that block stays the same. <span class="num-hl">Zero parameters</span> — nothing to learn here.</p>` },
+
+  { id:'conv2', icon:'🔬', color:'#ff6b35', bg:'rgba(255,107,53,0.12)',
+    type:'CONV LAYER 2', name:'Conv2D', code:'Conv2D(64, (3,3), activation="relu")',
+    shapeIn:'13×13×64', shapeOut:'11×11×64', params:36928,
+    tags:['relu'],
+    vis:'conv',
+    explain:`<div class="explain-title">Learning combinations of features</div>
+    <p class="explain-body">This layer doesn't see raw pixels — it sees the <span class="num-hl">64 feature maps</span> from the previous layer. So it learns <strong>combinations of features</strong>: "an edge next to a curve" could mean a collar, a shoe outline, a bag handle.</p>
+    <div class="callout callout-orange">The parameter count jumps dramatically here because each filter now has <strong>64 input channels</strong> instead of 1. That's why deeper layers are much richer.</div>
+    <div class="formula-chip">(3×3×64 + 1 bias) × 64 = 36,928 params</div>` },
+
+  { id:'pool2', icon:'⬇', color:'#22c55e', bg:'rgba(34,197,94,0.1)',
+    type:'POOLING 2', name:'MaxPooling2D', code:'MaxPooling2D(2, 2)',
+    shapeIn:'11×11×64', shapeOut:'5×5×64', params:0,
+    tags:['pool','none'],
+    vis:'pool',
+    explain:`<div class="explain-title">Compress again</div>
+    <p class="explain-body">Same operation as before. <span class="num-hl">11 ÷ 2 = 5.5</span>, which floors to 5. Output: <span class="num-hl">5×5×64</span>.</p>
+    <p class="explain-body">We've compressed from 28×28 all the way to 5×5 — the network has distilled the image down to its most essential patterns across 64 feature channels. Still zero parameters.</p>` },
+
+  { id:'flatten', icon:'→', color:'#f59e0b', bg:'rgba(245,158,11,0.1)',
+    type:'FLATTEN', name:'Flatten', code:'Flatten()',
+    shapeIn:'5×5×64', shapeOut:'1600', params:0,
+    tags:['none'],
+    vis:'flatten',
+    explain:`<div class="explain-title">3D → 1D: the bridge</div>
+    <p class="explain-body">Dense layers only understand 1D vectors. Flatten unrolls the 3D feature cube into a single long list of numbers — no maths, no weights, just a reshape.</p>
+    <div class="callout callout-cyan"><strong>5 × 5 × 64 = 1,600 numbers</strong> in a row. This is the complete compressed representation of the image ready for the decision-making layers.</div>
+    <div class="formula-chip">5 × 5 × 64 = 1,600</div>` },
+
+  { id:'dense1', icon:'🕸', color:'#ec4899', bg:'rgba(236,72,153,0.1)',
+    type:'DENSE LAYER', name:'Dense 128', code:'Dense(128, activation="relu")',
+    shapeIn:'1600', shapeOut:'128', params:204928,
+    tags:['relu','key'],
+    vis:'dense',
+    explain:`<div class="explain-title">The big decision-maker</div>
+    <p class="explain-body">Every one of the <span class="num-hl">1,600 inputs</span> connects to every one of <span class="num-hl">128 neurons</span>. Each neuron computes a weighted sum of all inputs and asks: "does this combination of features mean something?"</p>
+    <div class="callout callout-cyan">This is where the network reasons globally: <em>"these features together — curved top, flat sole, laces pattern — look like a Sneaker."</em> The conv layers detected the parts; Dense assembles the story.</div>
+    <p class="explain-body">This single layer accounts for <span class="num-hl">84%</span> of all parameters in the network — exactly why we compress with conv+pooling first.</p>
+    <div class="formula-chip">(1600 × 128) + 128 bias = 204,928 params</div>` },
+
+  { id:'output', icon:'🎯', color:'#00d4ff', bg:'rgba(0,212,255,0.1)',
+    type:'OUTPUT LAYER', name:'Dense 10 (Softmax)', code:'Dense(10, activation="softmax")',
+    shapeIn:'128', shapeOut:'10', params:1290,
+    tags:['key'],
+    vis:'softmax',
+    explain:`<div class="explain-title">The final verdict</div>
+    <p class="explain-body"><span class="num-hl">10 neurons</span> — one per clothing class. <strong>Softmax</strong> converts 10 raw scores into 10 probabilities that sum to exactly 1.0.</p>
+    <div class="callout callout-cyan">The class with the highest probability is the prediction. <strong>"91% confident this is a Sneaker."</strong> Argmax of the output vector gives the class index.</div>
+    <p class="explain-body">Unlike hidden layers (ReLU), the output layer uses <span class="num-hl">Softmax</span> — the standard choice for multi-class classification. For binary problems you'd use Sigmoid instead.</p>
+    <div class="formula-chip">(128 × 10) + 10 bias = 1,290 params</div>` }
+];
+
+const layerColors = { conv1:'#ff6b35', pool1:'#22c55e', conv2:'#ff6b35', pool2:'#22c55e', flatten:'#f59e0b', dense1:'#ec4899', output:'#00d4ff', input:'#a855f7' };
+
+// ── BUILD PIPELINE ────────────────────────────────────────────────────
+const track = document.getElementById('pipelineTrack');
+const navPills = document.getElementById('navPills');
+
+layers.forEach((l, i) => {
+  const node = document.createElement('div');
+  node.className = 'p-node';
+  node.id = 'pnode-'+l.id;
+  node.style.borderColor = l.color+'33';
+  node.innerHTML = `
+    <div class="p-num">0${i+1}</div>
+    <div class="p-icon">${l.icon}</div>
+    <div class="p-type" style="color:${l.color}">${l.type}</div>
+    <div class="p-label">${l.name}</div>
+    <div class="p-shape-row">
+      <span class="p-shape-in">${l.shapeIn}</span>
+      <span class="p-mini-arr">→</span>
+      <span class="p-shape-out">${l.shapeOut}</span>
+    </div>
+  `;
+  node.style.setProperty('--nc', l.color);
+  node.addEventListener('click', () => {
+    document.getElementById('lcard-'+l.id)?.scrollIntoView({behavior:'smooth',block:'start'});
+    openLayer(l.id);
+  });
+  // hover glow
+  node.addEventListener('mouseenter', () => {
+    node.style.boxShadow = `0 12px 40px ${l.color}20`;
+    node.style.borderColor = l.color+'66';
+  });
+  node.addEventListener('mouseleave', () => {
+    node.style.boxShadow = '';
+    node.style.borderColor = l.color+'33';
+  });
+  track.appendChild(node);
+
+  if(i < layers.length-1) {
+    const conn = document.createElement('div');
+    conn.className = 'p-connector';
+    conn.innerHTML = '<div class="p-conn-arrow"></div>';
+    track.appendChild(conn);
+  }
+
+  const pill = document.createElement('div');
+  pill.className = 'nav-pill';
+  pill.id = 'npill-'+i;
+  pill.addEventListener('click', () => {
+    document.getElementById('lcard-'+l.id)?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  navPills.appendChild(pill);
+});
+
+// ── BUILD LAYER CARDS ─────────────────────────────────────────────────
+const lsec = document.getElementById('layerSection');
+
+function tagHtml(tags) {
+  return tags.map(t => {
+    if(t==='relu') return `<span class="ltag ltag-relu">ReLU</span>`;
+    if(t==='pool') return `<span class="ltag ltag-pool">Downsampling</span>`;
+    if(t==='none') return `<span class="ltag ltag-none">No Parameters</span>`;
+    if(t==='key')  return `<span class="ltag ltag-key">Key Layer</span>`;
+    return '';
+  }).join('');
+}
+
+layers.forEach((l, i) => {
+  const card = document.createElement('div');
+  card.className = 'lcard reveal';
+  card.id = 'lcard-'+l.id;
+  card.innerHTML = `
+    <div class="lcard-header" id="lhdr-${l.id}" onclick="toggleLayer('${l.id}')">
+      <div class="lcard-num">0${i+1}</div>
+      <div class="lcard-icon" style="background:${l.bg}" id="licon-${l.id}">
+        <span style="font-size:26px;position:relative;z-index:1">${l.icon}</span>
+      </div>
+      <div class="lcard-text">
+        <div class="lcard-type" style="color:${l.color}">${l.type}</div>
+        <div class="lcard-name">${l.name}</div>
+        <div class="lcard-code">${l.code}</div>
+      </div>
+      <div class="lcard-meta">
+        <div class="shape-flow">
+          <span class="sh sh-in">${l.shapeIn}</span>
+          <span class="sh-arr">→</span>
+          <span class="sh sh-out">${l.shapeOut}</span>
+        </div>
+        <div class="params-badge ${l.params>0?'has-params':''}">${l.params>0?l.params.toLocaleString()+' params':'no params'}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end">${tagHtml(l.tags)}</div>
+      </div>
+      <div class="chevron-icon">▼</div>
+    </div>
+    <div class="lcard-body" id="lbody-${l.id}">
+      <div class="lcard-inner">
+        <div class="lcard-explain">${l.explain}</div>
+        <div class="lcard-vis" id="lvis-${l.id}"></div>
+      </div>
+    </div>
+  `;
+  lsec.appendChild(card);
+});
+
+const openLayers = new Set();
+
+function openLayer(id) {
+  const body = document.getElementById('lbody-'+id);
+  const hdr = document.getElementById('lhdr-'+id);
+  if(!body.classList.contains('open')) {
+    body.classList.add('open');
+    hdr.classList.add('open');
+    if(!openLayers.has(id)) { openLayers.add(id); buildVis(id); }
+    document.getElementById('pnode-'+id)?.classList.add('active');
+  }
+}
+
+function toggleLayer(id) {
+  const body = document.getElementById('lbody-'+id);
+  const hdr = document.getElementById('lhdr-'+id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  hdr.classList.toggle('open', !isOpen);
+  if(!isOpen && !openLayers.has(id)) { openLayers.add(id); buildVis(id); }
+}
+
+// ── VISUALISATIONS ────────────────────────────────────────────────────
+function buildVis(id) {
+  const el = document.getElementById('lvis-'+id);
+  const l = layers.find(x=>x.id===id);
+  if(!el||!l) return;
+  if(l.vis==='image') buildImageVis(el,l);
+  else if(l.vis==='conv') buildConvVis(el,l,id);
+  else if(l.vis==='pool') buildPoolVis(el,l,id);
+  else if(l.vis==='flatten') buildFlattenVis(el);
+  else if(l.vis==='dense') buildDenseVis(el,l);
+  else if(l.vis==='softmax') buildSoftmaxVis(el,l);
+}
+
+// IMAGE VIS
+function buildImageVis(el) {
+  const N=14;
+  let cells='';
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) {
+    const v=Math.round(255*(0.2+0.7*Math.abs(Math.sin(r*0.7+c*0.3)*Math.cos(r*0.4-c*0.6))));
+    cells+=`<div style="background:rgb(${v},${v},${v});border-radius:1px"></div>`;
+  }
+  el.innerHTML=`
+    <div class="pixel-grid-vis">
+      <div class="px-grid" style="grid-template-columns:repeat(${N},1fr);width:196px;height:196px">${cells}</div>
+      <div class="px-label">28 × 28 × 1 — grayscale image</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--c2)">pixel range:</div>
+        <div style="background:linear-gradient(to right,#000,#fff);width:80px;height:8px;border-radius:4px"></div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">0 → 1</div>
+      </div>
+    </div>`;
+}
+
+// CONV VIS
+function buildConvVis(el, l, id) {
+  const N=8, cellSz=16, filtSz=3;
+  const cvW=N*cellSz+(N-1)*1, cvH=N*cellSz+(N-1)*1;
+  const fW=cvW, fH=cvH;
+  el.innerHTML=`
+    <div class="conv-stage">
+      <div class="conv-top">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-bottom:6px">input image</div>
+          <div class="conv-img-wrap">
+            <canvas class="conv-canvas" id="cvImg-${id}" width="${cvW}" height="${cvH}"></canvas>
+            <div class="filter-box" id="filterBox-${id}" style="width:${filtSz*cellSz+(filtSz-1)*1}px;height:${filtSz*cellSz+(filtSz-1)*1}px;top:0;left:0"></div>
+          </div>
+        </div>
+        <div class="conv-arrow-h" style="color:${l.color}">→</div>
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-bottom:6px">feature map</div>
+          <canvas class="feat-canvas" id="cvFeat-${id}" width="${fW}" height="${fH}"></canvas>
+        </div>
+      </div>
+      <div class="conv-info">3×3 filter sliding — detecting features</div>
+    </div>`;
+  const imgCtx = document.getElementById('cvImg-'+id).getContext('2d');
+  const featCtx = document.getElementById('cvFeat-'+id).getContext('2d');
+  const pixels=[];
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) {
+    const v=Math.round(255*(0.15+0.75*Math.abs(Math.sin(r*0.9+c*0.4))));
+    pixels.push(v);
+    imgCtx.fillStyle=`rgb(${v},${v},${v})`;
+    imgCtx.fillRect(c*(cellSz+1),r*(cellSz+1),cellSz,cellSz);
+  }
+  const featData=new Array(N*N).fill(0);
+  let fr=0,fc=0, tick=0;
+  function convStep() {
+    if(!document.getElementById('filterBox-'+id)) return;
+    const fb=document.getElementById('filterBox-'+id);
+    const x=fc*(cellSz+1), y=fr*(cellSz+1);
+    fb.style.left=x+'px'; fb.style.top=y+'px';
+    let sum=0;
+    for(let dr=0;dr<filtSz;dr++) for(let dc=0;dc<filtSz;dc++) {
+      const rr=fr+dr, cc=fc+dc;
+      if(rr<N&&cc<N) sum+=pixels[rr*N+cc];
+    }
+    const norm=Math.min(255,Math.round(sum/(filtSz*filtSz)));
+    featData[fr*N+fc]=norm;
+    featCtx.fillStyle=`rgba(${l.color.replace('#','').match(/.{2}/g).map(h=>parseInt(h,16)).join(',')},${norm/255})`;
+    featCtx.fillRect(fc*(cellSz+1),fr*(cellSz+1),cellSz,cellSz);
+    fc++; if(fc>N-filtSz){fc=0;fr++;} if(fr>N-filtSz){fr=0;fc=0;featCtx.clearRect(0,0,fW,fH);}
+    setTimeout(convStep,120);
+  }
+  convStep();
+}
+
+// POOL VIS
+function buildPoolVis(el, l, id) {
+  const N=6, cellSz=32;
+  const vals=[];
+  for(let i=0;i<N*N;i++) vals.push(Math.floor(Math.random()*100)+10);
+  let cells='';
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++) {
+    const v=vals[r*N+c];
+    cells+=`<div id="pc-${id}-${r}-${c}" style="width:${cellSz}px;height:${cellSz}px;background:rgba(${l.color.replace('#','').match(/.{2}/g).map(h=>parseInt(h,16)).join(',')},${v/110});border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:rgba(255,255,255,0.7);transition:all 0.3s">${v}</div>`;
+  }
+  let outCells='';
+  for(let r=0;r<3;r++) for(let c=0;c<3;c++) {
+    const block=[vals[r*2*N+c*2],vals[r*2*N+c*2+1],vals[(r*2+1)*N+c*2],vals[(r*2+1)*N+c*2+1]];
+    const mx=Math.max(...block);
+    outCells+=`<div id="po-${id}-${r}-${c}" style="width:${cellSz}px;height:${cellSz}px;background:rgba(34,197,94,${mx/110});border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:11px;font-weight:700;color:rgba(255,255,255,0.9);transition:all 0.3s">${mx}</div>`;
+  }
+  el.innerHTML=`
+    <div class="pool-stage">
+      <div class="pool-row">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-align:center;margin-bottom:6px">6×6 input</div>
+          <div style="display:grid;grid-template-columns:repeat(${N},${cellSz}px);gap:3px">${cells}</div>
+        </div>
+        <div style="font-size:24px;color:var(--dim)">→</div>
+        <div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--c4);text-align:center;margin-bottom:6px">3×3 output</div>
+          <div style="display:grid;grid-template-columns:repeat(3,${cellSz}px);gap:3px">${outCells}</div>
+        </div>
+      </div>
+      <div class="pool-info">max value wins each 2×2 block</div>
+    </div>`;
+  let bk=0;
+  const blocks=[[0,0],[0,2],[0,4],[2,0],[2,2],[2,4],[4,0],[4,2],[4,4]];
+  function poolStep() {
+    if(!document.getElementById(`pc-${id}-0-0`)) return;
+    // reset
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      const e=document.getElementById(`pc-${id}-${r}-${c}`);
+      if(e) e.style.outline='none';
+    }
+    for(let r=0;r<3;r++) for(let c=0;c<3;c++){
+      const e=document.getElementById(`po-${id}-${r}-${c}`);
+      if(e) e.style.outline='none';
+    }
+    const [br,bc]=blocks[bk];
+    for(let dr=0;dr<2;dr++) for(let dc=0;dc<2;dc++){
+      const e=document.getElementById(`pc-${id}-${br+dr}-${bc+dc}`);
+      if(e) e.style.outline='2px solid '+l.color;
+    }
+    const oe=document.getElementById(`po-${id}-${Math.floor(bk/3)}-${bk%3}`);
+    if(oe) oe.style.outline='2px solid var(--c4)';
+    bk=(bk+1)%9;
+    setTimeout(poolStep,700);
+  }
+  poolStep();
+}
+
+// FLATTEN VIS
+function buildFlattenVis(el) {
+  const bars=Array.from({length:28},(_,i)=>`<div class="flat-bar" style="height:7px;animation-delay:${i*0.06}s;background:rgba(245,158,11,${0.3+Math.random()*0.5})"></div>`).join('');
+  el.innerHTML=`
+    <div class="flatten-stage">
+      <div class="cube-wrapper">
+        <div class="cube3d">
+          <div class="cface front">5×5</div>
+          <div class="cface back">5×5</div>
+          <div class="cface right">×64</div>
+          <div class="cface left">×64</div>
+          <div class="cface top"></div>
+          <div class="cface bottom"></div>
+        </div>
+      </div>
+      <div class="flatten-arrow">→</div>
+      <div>
+        <div class="flat-col">${bars}</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-top:8px;text-align:center">1,600 values</div>
+      </div>
+    </div>`;
+}
+
+// DENSE VIS
+function buildDenseVis(el, l) {
+  const W=280,H=260;
+  const inN=10,hidN=7,outN=4;
+  const getY=(i,tot)=>(H/(tot+1))*(i+1);
+  const iX=40,hX=140,oX=240;
+  let lines='';
+  for(let i=0;i<inN;i++) for(let j=0;j<hidN;j++) {
+    const op=(0.04+Math.random()*0.1).toFixed(2);
+    lines+=`<line x1="${iX}" y1="${getY(i,inN)}" x2="${hX}" y2="${getY(j,hidN)}" stroke="${l.color}" stroke-width="0.6" opacity="${op}" class="dline" id="dl-${i}-${j}"/>`;
+  }
+  for(let j=0;j<hidN;j++) for(let k=0;k<outN;k++) {
+    const op=(0.04+Math.random()*0.12).toFixed(2);
+    lines+=`<line x1="${hX}" y1="${getY(j,hidN)}" x2="${oX}" y2="${getY(k,outN)}" stroke="#00d4ff" stroke-width="0.6" opacity="${op}"/>`;
+  }
+  const iCircles=Array.from({length:inN},(_,i)=>`<circle cx="${iX}" cy="${getY(i,inN)}" r="5" fill="${l.bg}" stroke="${l.color}" stroke-width="1" id="dn-in-${i}"/>`).join('');
+  const hCircles=Array.from({length:hidN},(_,j)=>`<circle cx="${hX}" cy="${getY(j,hidN)}" r="7" fill="rgba(236,72,153,0.1)" stroke="#ec4899" stroke-width="1" id="dn-hid-${j}"/>`).join('');
+  const oCircles=Array.from({length:outN},(_,k)=>`<circle cx="${oX}" cy="${getY(k,outN)}" r="7" fill="rgba(0,212,255,0.08)" stroke="#00d4ff" stroke-width="1" id="dn-out-${k}"/>`).join('');
+  el.innerHTML=`
+    <div class="dense-wrap" style="max-width:${W}px">
+      <svg class="dense-svg" viewBox="0 0 ${W} ${H}">
+        ${lines}${iCircles}${hCircles}${oCircles}
+        <text x="${iX}" y="${H-5}" text-anchor="middle" fill="#7070a0" font-size="9" font-family="'Syne Mono'">1600 in</text>
+        <text x="${hX}" y="${H-5}" text-anchor="middle" fill="#7070a0" font-size="9" font-family="'Syne Mono'">128</text>
+        <text x="${oX}" y="${H-5}" text-anchor="middle" fill="#7070a0" font-size="9" font-family="'Syne Mono'">out</text>
+      </svg>
+    </div>`;
+  let tick=0;
+  function denseAnim() {
+    if(!document.getElementById('dn-in-0')) return;
+    const i=tick%inN;
+    const inc=document.getElementById('dn-in-'+i);
+    if(inc){
+      inc.setAttribute('fill', l.color+'cc');
+      inc.setAttribute('r','7');
+      setTimeout(()=>{ if(inc){inc.setAttribute('fill',l.bg);inc.setAttribute('r','5');} },300);
+    }
+    for(let j=0;j<hidN;j++) {
+      const h=document.getElementById('dn-hid-'+j);
+      if(h) setTimeout(()=>{
+        if(h){h.setAttribute('fill','#ec4899bb');h.setAttribute('r','9');}
+        setTimeout(()=>{if(h){h.setAttribute('fill','rgba(236,72,153,0.1)');h.setAttribute('r','7');}},250);
+      },150+j*35);
+    }
+    tick++; setTimeout(denseAnim,900);
+  }
+  denseAnim();
+}
+
+// SOFTMAX VIS
+function buildSoftmaxVis(el) {
+  const classes=[
+    {name:'T-shirt',pct:2,color:'#a855f7'},
+    {name:'Trouser',pct:1,color:'#8b5cf6'},
+    {name:'Pullover',pct:3,color:'#6366f1'},
+    {name:'Dress',pct:1,color:'#3b82f6'},
+    {name:'Sandal',pct:1,color:'#06b6d4'},
+    {name:'Sneaker',pct:88,color:'#22c55e'},
+    {name:'Bag',pct:2,color:'#84cc16'},
+    {name:'Ankle boot',pct:2,color:'#f59e0b'}
+  ];
+  const rows=classes.map(c=>`
+    <div class="sm-row">
+      <div class="sm-label">${c.name}</div>
+      <div class="sm-track">
+        <div class="sm-fill" id="smbar-${c.name.replace(/ /g,'')}" style="background:${c.color}">${c.pct>=15?c.pct+'%':''}</div>
+      </div>
+      <div class="sm-pct" style="color:${c.pct>=50?'var(--c4)':'var(--muted)'}">${c.pct}%</div>
+    </div>`).join('');
+  el.innerHTML=`<div class="softmax-wrap">${rows}<div class="sm-winner">→ Prediction: Sneaker (88% confidence)</div></div>`;
+  setTimeout(()=>{ classes.forEach(c=>{ const b=document.getElementById('smbar-'+c.name.replace(/ /g,'')); if(b)b.style.width=c.pct+'%'; }); },300);
+}
+
+// ── PARAMS BARS ───────────────────────────────────────────────────────
+const total=243786;
+const pdata=[
+  {name:'Conv2D Layer 1',v:640,c:'#ff6b35'},
+  {name:'Conv2D Layer 2',v:36928,c:'#ff8c42'},
+  {name:'Dense 128',v:204928,c:'#ec4899'},
+  {name:'Dense 10',v:1290,c:'#00d4ff'}
+];
+const pbSec=document.getElementById('paramsBarSection');
+pdata.forEach(p=>{
+  pbSec.innerHTML+=`
+    <div class="pbar-row">
+      <div class="pbar-meta">
+        <span class="pbar-name">${p.name}</span>
+        <span class="pbar-num">${p.v.toLocaleString()}</span>
+      </div>
+      <div class="pbar-track">
+        <div class="pbar-fill" id="pb-${p.name.replace(/ /g,'')}" style="background:${p.c};width:0"></div>
+      </div>
+    </div>`;
+});
+
+const bigCtr=document.getElementById('bigCounter');
+let pAnimated=false;
+function animateParams() {
+  if(pAnimated) return; pAnimated=true;
+  // counter
+  let n=0; const step=total/80;
+  const t=setInterval(()=>{ n=Math.min(n+step,total); bigCtr.textContent=Math.floor(n).toLocaleString(); if(n>=total)clearInterval(t); },20);
+  // bars
+  pdata.forEach(p=>{ const b=document.getElementById('pb-'+p.name.replace(/ /g,'')); if(b) setTimeout(()=>b.style.width=(p.v/total*100)+'%',200); });
+}
+
+// ── QUIZ ──────────────────────────────────────────────────────────────
+const quizzes=[
+  {q:"A 28×28 image passes through Conv2D with a 3×3 filter (no padding). What is the output spatial size?",
+   opts:["28×28","26×26","25×25","30×30"],ans:1,
+   fb:"✓ Correct! 28 − 3 + 1 = 26. The filter can't hang off the edge — we lose 1 pixel on each side."},
+  {q:"Pixel values are divided by 255 before training. Why?",
+   opts:["To make images smaller","To normalise to 0–1 for stable training","CNNs only accept decimals","To remove noise"],ans:1,
+   fb:"✓ Right! Large inputs cause large gradients and unstable weight updates. 0–1 range keeps training controlled."},
+  {q:"Why can Conv layer outputs be negative even though pixels are 0–255?",
+   opts:["Normalisation makes them negative","Filter weights are learned decimals — some are negative","ReLU causes negatives","MaxPooling introduces negatives"],ans:1,
+   fb:"✓ Exactly! Filter weights (learned during training) can be negative. Positive pixel × negative weight = negative output."},
+  {q:"MaxPooling2D(2,2) takes a 26×26 feature map. What is the output size?",
+   opts:["24×24","28×28","13×13","52×52"],ans:2,
+   fb:"✓ Correct! Pool size 2×2 halves both dimensions. 26 ÷ 2 = 13."},
+  {q:"What does Flatten() actually do?",
+   opts:["Removes negative values","Trains weights on the data","Reshapes 3D maps to a 1D vector","Applies softmax activation"],ans:2,
+   fb:"✓ Just a reshape — no learning, no maths. It bridges convolutional layers to Dense layers."},
+  {q:"Which single layer has the most parameters in this CNN?",
+   opts:["Conv2D Layer 1 (640)","Conv2D Layer 2 (36,928)","Dense(128) (204,928)","MaxPooling (0)"],ans:2,
+   fb:"✓ Dense(128) holds 84% of all parameters — 204,928 out of 243,786. That's exactly why conv+pooling compression matters."}
+];
+let qIdx=0;
+function buildQuiz(i) {
+  const q=quizzes[i];
+  document.getElementById('quizCounter').textContent=`${i+1} / ${quizzes.length}`;
+  document.getElementById('quizQ').textContent=q.q;
+  // progress
+  const prog=document.getElementById('quizProgress');
+  prog.innerHTML=quizzes.map((_,j)=>`<div class="qp-dot ${j<i?'done':j===i?'active':''}"></div>`).join('');
+  const opts=document.getElementById('quizOpts');
+  opts.innerHTML=q.opts.map((o,j)=>`<button class="quiz-opt" onclick="checkAns(${j},${q.ans},'${q.fb.replace(/'/g,"\\'")}')">${o}</button>`).join('');
+  document.getElementById('quizFb').className='quiz-fb';
+  document.getElementById('quizNextBtn').className='quiz-next-btn';
+}
+function checkAns(chosen,correct,fb) {
+  document.querySelectorAll('.quiz-opt').forEach(o=>o.style.pointerEvents='none');
+  document.querySelectorAll('.quiz-opt')[correct].classList.add('correct');
+  if(chosen!==correct) document.querySelectorAll('.quiz-opt')[chosen].classList.add('wrong');
+  const fbEl=document.getElementById('quizFb');
+  fbEl.textContent=chosen===correct?fb:'✗ Not quite. '+fb.slice(2);
+  fbEl.className='quiz-fb show '+(chosen===correct?'ok':'bad');
+  const nb=document.getElementById('quizNextBtn');
+  nb.className='quiz-next-btn show';
+  if(qIdx>=quizzes.length-1) { nb.textContent='↺ Restart'; nb.onclick=()=>{qIdx=0;buildQuiz(0);nb.onclick=nextQ;}; }
+}
+function nextQ() { qIdx++; if(qIdx<quizzes.length) buildQuiz(qIdx); }
+buildQuiz(0);
+
+// ── SCROLL + REVEAL ───────────────────────────────────────────────────
+const nav=document.getElementById('nav');
+window.addEventListener('scroll',()=>{
+  const sy=window.scrollY;
+  nav.classList.toggle('show',sy>200);
+  // reveal
+  document.querySelectorAll('.reveal').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    if(r.top<window.innerHeight*0.88) el.classList.add('in');
+  });
+  // params anim
+  const pcEl=document.getElementById('bigCounter');
+  if(pcEl){ const r=pcEl.getBoundingClientRect(); if(r.top<window.innerHeight) animateParams(); }
+  // nav pills
+  layers.forEach((l,i)=>{
+    const card=document.getElementById('lcard-'+l.id);
+    const pill=document.getElementById('npill-'+i);
+    if(!card||!pill) return;
+    const r=card.getBoundingClientRect();
+    if(r.top<window.innerHeight*0.5&&r.bottom>0){ pill.classList.add('lit'); }
+    else if(r.bottom<0){ pill.classList.remove('lit'); pill.classList.add('passed'); }
+    else { pill.classList.remove('lit','passed'); }
+  });
+  // softmax auto-trigger
+  const smLayer=document.getElementById('lvis-output');
+  if(smLayer&&smLayer.innerHTML.trim()!==''){ const r=smLayer.getBoundingClientRect(); if(r.top<window.innerHeight){ smLayer.querySelectorAll('.sm-fill').forEach(b=>{ if(b.dataset.triggered) return; b.dataset.triggered='1'; const pct=b.parentElement.parentElement.querySelector('.sm-pct')?.textContent.replace('%',''); if(pct) b.style.width=pct+'%'; }); } }
+});
+
+// trigger reveal on load
+setTimeout(()=>{ document.querySelectorAll('.reveal').forEach(el=>{ const r=el.getBoundingClientRect(); if(r.top<window.innerHeight*0.9) el.classList.add('in'); }); },100);
+
+// auto-open first layer
+setTimeout(()=>{ openLayer('input'); },800);
+</script>
+</body>
+</html>

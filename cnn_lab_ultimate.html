@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CNN Interactive Lab Ultimate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #060712;
+      --bg-2: #0b1023;
+      --card: rgba(18, 24, 50, 0.75);
+      --border: rgba(255, 255, 255, 0.12);
+      --text: #f6f8ff;
+      --muted: #b3bddd;
+      --cyan: #29dfff;
+      --violet: #9d6bff;
+      --orange: #ff8a4c;
+      --green: #35d69a;
+      --mono: "JetBrains Mono", monospace;
+      --display: "Space Grotesk", sans-serif;
+      --body: "Outfit", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--body);
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(157, 107, 255, 0.16), transparent 55%),
+                  radial-gradient(1200px 700px at 0% 20%, rgba(41, 223, 255, 0.13), transparent 55%),
+                  var(--bg);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 3px 3px;
+      opacity: 0.04;
+      z-index: -1;
+    }
+
+    .container { width: min(1150px, 92vw); margin: 0 auto; }
+    .mono { font-family: var(--mono); }
+
+    .hero {
+      min-height: 88vh;
+      display: grid;
+      align-items: center;
+      padding: 90px 0 50px;
+      position: relative;
+    }
+    #hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: 0.45;
+    }
+    .eyebrow {
+      color: var(--cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-size: 12px;
+      font-family: var(--mono);
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(44px, 8vw, 94px);
+      line-height: 0.95;
+      letter-spacing: -2px;
+      margin-bottom: 18px;
+    }
+    h1 .grad {
+      background: linear-gradient(120deg, var(--cyan), var(--violet), var(--orange));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      max-width: 620px;
+      color: #d5ddf8;
+      font-size: 18px;
+      margin-bottom: 26px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      padding: 11px 16px;
+      border-radius: 9px;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: 0.22s ease;
+      text-transform: uppercase;
+    }
+    .btn:hover { transform: translateY(-2px); border-color: var(--cyan); }
+    .btn-primary {
+      border-color: rgba(41, 223, 255, 0.5);
+      background: rgba(41, 223, 255, 0.12);
+      color: var(--cyan);
+    }
+
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      backdrop-filter: blur(12px);
+      background: rgba(6, 7, 18, 0.8);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(130px, 1fr));
+      gap: 8px;
+      padding: 12px 0;
+    }
+    .step {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .step.active, .step:hover {
+      border-color: rgba(41, 223, 255, 0.45);
+      color: var(--cyan);
+      background: rgba(41, 223, 255, 0.08);
+    }
+
+    main { padding: 32px 0 70px; }
+    .card {
+      border: 1px solid var(--border);
+      background: linear-gradient(145deg, rgba(20,27,56,0.82), rgba(10,13,29,0.88));
+      border-radius: 16px;
+      margin-bottom: 18px;
+      overflow: hidden;
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .explain { padding: 36px; border-right: 1px solid var(--border); }
+    .vis { padding: 28px; display: grid; place-items: center; min-height: 340px; background: rgba(0,0,0,0.16); }
+    .card h2 { font-family: var(--display); font-size: 30px; margin: 8px 0 10px; }
+    .text { color: #d2dbfa; }
+    .formula {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 7px 11px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 138, 76, 0.35);
+      color: var(--orange);
+      background: rgba(255, 138, 76, 0.08);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+    .deep-dive {
+      margin-top: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      overflow: hidden;
+    }
+    .deep-dive summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--cyan);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      border-bottom: 1px solid transparent;
+    }
+    .deep-dive[open] summary {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+      background: rgba(41, 223, 255, 0.06);
+    }
+    .deep-dive-body {
+      padding: 11px 12px 12px;
+      color: #d7dffa;
+      font-size: 14px;
+      line-height: 1.75;
+    }
+    .deep-dive-body p + p { margin-top: 8px; }
+    .panel {
+      width: min(360px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #03050d;
+    }
+    canvas { display: block; width: 100%; image-rendering: pixelated; }
+
+    .conv-wrap { position: relative; }
+    #scanner {
+      position: absolute;
+      border: 2px solid var(--orange);
+      width: 32px;
+      height: 32px;
+      pointer-events: none;
+      box-shadow: 0 0 18px rgba(255, 138, 76, 0.55);
+      background: rgba(255, 138, 76, 0.1);
+    }
+    .readout {
+      margin-top: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      padding: 9px 10px;
+      color: var(--cyan);
+      font-size: 11px;
+      font-family: var(--mono);
+      min-height: 70px;
+      width: min(360px, 100%);
+    }
+
+    .row { display: flex; gap: 10px; align-items: center; }
+    .softmax { width: min(430px, 100%); }
+    .bar-row { display: grid; grid-template-columns: 90px 1fr 38px; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .bar-track { height: 11px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), #52f0b9); transition: width 0.5s ease; }
+    .winner { margin-top: 10px; color: var(--green); font-weight: 700; font-family: var(--mono); font-size: 13px; }
+
+    .pool-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 4px;
+      width: min(240px, 92%);
+      margin-bottom: 12px;
+    }
+    .pool-cell {
+      aspect-ratio: 1 / 1;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-family: var(--mono);
+      color: rgba(255,255,255,0.84);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .mini-map {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 9;
+      border: 1px solid var(--border);
+      background: rgba(8, 11, 24, 0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 10px;
+      padding: 10px 8px;
+      display: grid;
+      gap: 7px;
+    }
+    .mini-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.08);
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .mini-dot.active {
+      background: var(--cyan);
+      box-shadow: 0 0 10px rgba(41, 223, 255, 0.75);
+      border-color: rgba(41, 223, 255, 0.5);
+    }
+
+    .flatten-wrap { width: min(460px, 100%); display: grid; place-items: center; gap: 12px; }
+    .flat-stage { width: 100%; display: flex; align-items: center; justify-content: center; gap: 24px; }
+    .cube-wrap { perspective: 420px; }
+    .cube3d {
+      width: 92px;
+      height: 92px;
+      transform-style: preserve-3d;
+      animation: cubeRotate 8s linear infinite;
+    }
+    @keyframes cubeRotate {
+      from { transform: rotateX(-22deg) rotateY(0deg); }
+      to { transform: rotateX(-22deg) rotateY(360deg); }
+    }
+    .face {
+      position: absolute;
+      width: 92px;
+      height: 92px;
+      border: 1px solid rgba(157, 107, 255, 0.35);
+      background: rgba(157, 107, 255, 0.09);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #d8c8ff;
+    }
+    .face.f1 { transform: translateZ(46px); }
+    .face.f2 { transform: rotateY(180deg) translateZ(46px); }
+    .face.f3 { transform: rotateY(90deg) translateZ(46px); }
+    .face.f4 { transform: rotateY(-90deg) translateZ(46px); }
+    .face.f5 { transform: rotateX(90deg) translateZ(46px); }
+    .face.f6 { transform: rotateX(-90deg) translateZ(46px); }
+    .flat-arrow { font-size: 22px; color: var(--muted); }
+    .flat-bars { display: flex; gap: 3px; align-items: end; height: 140px; width: min(250px, 100%); }
+    .flat-bar { width: 6px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--violet), var(--cyan)); opacity: 0.75; }
+
+    .dense-wrap { width: min(430px, 100%); }
+    .dense-svg {
+      width: 100%;
+      height: 230px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.22);
+    }
+    .dline { stroke: rgba(157, 107, 255, 0.16); stroke-width: 1; }
+    .dcircle { fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.2); stroke-width: 1; }
+    .dcircle.live { fill: rgba(41,223,255,0.9); filter: drop-shadow(0 0 4px rgba(41,223,255,0.8)); stroke: rgba(41,223,255,0.95); }
+
+    .legend {
+      width: min(450px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+      margin-top: 12px;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+    .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 7px; }
+
+    .reveal { opacity: 0; transform: translateY(18px) scale(0.99); transition: 0.55s ease; }
+    .reveal.in { opacity: 1; transform: translateY(0) scale(1); }
+
+    .after-softmax { margin-top: 6px; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(255,255,255,0.03);
+    }
+    .metric .num { font-family: var(--display); font-size: 28px; color: var(--cyan); line-height: 1; margin-bottom: 4px; }
+    .metric .lbl { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .params-bars { margin-top: 16px; display: grid; gap: 10px; }
+    .p-row { display: grid; grid-template-columns: 130px 1fr 78px; gap: 10px; align-items: center; }
+    .p-track { height: 9px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .p-fill { height: 100%; border-radius: 999px; width: 0; transition: width 0.9s ease; }
+
+    .quiz-wrap { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,0.03); padding: 14px; }
+    .quiz-q { font-size: 16px; color: #e7ecff; margin-bottom: 12px; }
+    .quiz-opts { display: grid; gap: 9px; }
+    .quiz-opt {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.02);
+      color: var(--text);
+      text-align: left;
+      font-family: var(--body);
+      cursor: pointer;
+    }
+    .quiz-opt:hover { border-color: rgba(41,223,255,0.45); }
+    .quiz-opt.good { border-color: rgba(53,214,154,0.6); background: rgba(53,214,154,0.15); }
+    .quiz-opt.bad { border-color: rgba(255,138,76,0.6); background: rgba(255,138,76,0.14); }
+    .quiz-foot { margin-top: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .quiz-fb { font-size: 13px; color: var(--muted); }
+
+    .faq-grid { margin-top: 14px; display: grid; gap: 10px; }
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.02);
+    }
+    .faq-q {
+      width: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      padding: 12px 13px;
+      font-family: var(--body);
+      cursor: pointer;
+    }
+    .faq-a {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+      padding: 0 13px;
+      color: #d4ddfb;
+      font-size: 14px;
+    }
+    .faq-item.open .faq-a { max-height: 220px; padding: 0 13px 12px; }
+
+    @media (max-width: 900px) {
+      .steps { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: 1fr; }
+      .explain { border-right: none; border-bottom: 1px solid var(--border); }
+      .mini-map { display: none; }
+      .metric-grid { grid-template-columns: 1fr 1fr; }
+      .p-row { grid-template-columns: 92px 1fr 62px; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="container">
+      <div class="eyebrow">Interactive Deep Learning Experience</div>
+      <h1>Build Intuition for <span class="grad">CNN Vision</span></h1>
+      <p class="hero-sub">A live layer-by-layer CNN walkthrough: upload your own image, inspect convolution math in real time, and watch probability outputs update.</p>
+      <div class="hero-actions">
+        <label class="btn btn-primary">Upload Image <input id="upload" type="file" accept="image/*" hidden></label>
+        <button class="btn" id="mode-btn">ELI5 Mode</button>
+        <button class="btn" onclick="document.getElementById('sec-1').scrollIntoView({behavior:'smooth'})">Start Exploring</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="sticky-nav">
+    <div class="container steps" id="steps"></div>
+  </div>
+
+  <div class="mini-map" id="mini-map"></div>
+
+  <main class="container">
+    <section class="card reveal" id="sec-0">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 1</div>
+          <h2 data-eli5="Picture becomes numbers">Input Tensor</h2>
+          <p class="text" data-eli5="The CNN sees your image as a 28 by 28 table of brightness values, not as a photo.">
+            We normalize the uploaded image into a 28 x 28 grayscale tensor. Every value is scaled to 0 to 1 so optimization stays numerically stable.
+          </p>
+          <div class="formula">Input shape: [28, 28, 1]</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Normalization just means shrinking big pixel numbers (0 to 255) into small ones (0 to 1), so training is smoother.">
+                Think of this as setting everyone to the same scale before the race starts. Pixels originally range from 0 to 255; we divide by 255 so values become 0 to 1. This helps the model learn faster and with fewer unstable jumps.
+              </p>
+              <p data-eli5="The image is only one color channel here, so each pixel has one brightness value, not three RGB values.">
+                Here each pixel has one number (brightness), because this dataset is grayscale. So the input is [28, 28, 1]. If it were RGB, it would be [28, 28, 3], and each filter would need three times more values to read.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="panel">
+            <canvas id="input" width="280" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-1">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 2</div>
+          <h2 data-eli5="Pattern scanner">Convolution + ReLU</h2>
+          <p class="text" data-eli5="A tiny 3x3 scanner moves across the image. It gives high scores when it sees the edge pattern it likes.">
+            A 3x3 kernel slides over every valid location and computes a dot product (sum of weight x pixel). ReLU then applies max(0, x) to keep useful activations and suppress negatives.
+          </p>
+          <div class="formula">Output: 26 x 26 after valid convolution</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Each filter is like a tiny detector. One may fire on vertical edges, another on curves or corners.">
+                A filter is a tiny 3x3 detector sliding across the image. At every position it asks: "How much does this patch look like what I detect?" Early filters usually learn simple patterns like edges or corners.
+              </p>
+              <p data-eli5="ReLU turns negatives into zero, so weak or wrong matches are muted and strong matches stand out.">
+                ReLU keeps useful signals and drops weak/negative ones: max(0, x). This makes the map cleaner and more focused. Without this non-linearity, stacking many layers would be much less powerful.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="conv-wrap panel" id="conv-wrap">
+            <canvas id="conv" width="280" height="280"></canvas>
+            <div id="scanner"></div>
+          </div>
+          <div class="readout" id="readout"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-2">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 3</div>
+          <h2 data-eli5="Keep the strongest">Max Pooling</h2>
+          <p class="text" data-eli5="From each 2x2 patch, we only keep the biggest value so the network focuses on strong clues.">
+            Pooling downsamples activations by taking the largest value in each 2x2 window. This compresses spatial resolution while preserving prominent responses.
+          </p>
+          <div class="formula">26 x 26 -> 13 x 13</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Pooling makes the model less sensitive to tiny position shifts. If a feature moves a little, it can still be kept.">
+                Max pooling looks at a 2x2 block and keeps only the strongest value. So even if an edge shifts by 1 pixel, the key signal often survives. That makes the model more robust to small movement.
+              </p>
+              <p data-eli5="It also cuts data size a lot, so later layers can focus on meaning instead of raw location detail.">
+                It also shrinks data a lot (26x26 -> 13x13), so later layers have less noise and less compute, while still keeping the important clues.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="pool-grid" id="pool-grid"></div>
+          <div class="mono" style="color:var(--muted);font-size:11px">Animated 2 x 2 max-window highlighting</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-3">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 4</div>
+          <h2 data-eli5="Flatten into one list">Flatten</h2>
+          <p class="text" data-eli5="After pooling, we line up all feature values into one long row so dense neurons can read them.">
+            Flatten reshapes the pooled feature map into a one-dimensional feature vector. No parameters are learned; it is purely a geometric transform.
+          </p>
+          <div class="formula">13 x 13 -> 169 values</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Flatten is not a brain step; it is just rearranging values from a grid into a line.">
+                Flatten does not learn anything. It simply unwraps the feature grid into one long list so dense neurons can read it.
+              </p>
+              <p data-eli5="After flattening, each number can connect to many neurons that combine clues to recognize classes.">
+                So this is a bridge step: convolution finds local patterns, flatten prepares them in vector form for global decision making.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="flatten-wrap">
+            <div class="mono" style="font-size:11px;color:var(--muted)">COMPRESSED FEATURE VECTOR</div>
+            <div class="flat-stage">
+              <div class="cube-wrap">
+                <div class="cube3d">
+                  <div class="face f1">13x13</div>
+                  <div class="face f2">13x13</div>
+                  <div class="face f3">maps</div>
+                  <div class="face f4">maps</div>
+                  <div class="face f5">pool</div>
+                  <div class="face f6">feat</div>
+                </div>
+              </div>
+              <div class="flat-arrow">-></div>
+              <div class="flat-bars" id="flat-bars"></div>
+            </div>
+            <div class="mono" style="font-size:10px;color:var(--muted)">3D FEATURES -> 1D VECTOR</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-4">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 5</div>
+          <h2 data-eli5="Neurons combine clues">Dense Layer</h2>
+          <p class="text" data-eli5="Dense neurons look at many flattened numbers together and learn combinations that hint at each clothing type.">
+            Dense neurons combine distributed feature evidence into class-relevant latent representations. This is where local patterns become semantic decision signals.
+          </p>
+          <div class="formula">169 -> 32 hidden features</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Each dense neuron has many weights. It learns what combination of clues means things like sneaker, coat, or bag.">
+                Dense neurons combine many clues at once. One neuron may respond to "curved sole + lace texture", another to "long vertical structure", and so on. Together they build class evidence.
+              </p>
+              <p data-eli5="This is a major decision stage because it mixes clues from across the whole image, not just one local patch.">
+                This stage is powerful but parameter-heavy, which is why earlier conv + pooling layers first compress the image into meaningful features.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="dense-wrap">
+            <svg class="dense-svg" id="dense-svg" viewBox="0 0 430 230"></svg>
+            <div class="mono" style="font-size:11px;color:var(--muted)">INPUT FEATURES -> HIDDEN REPRESENTATION -> LOGITS</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-5">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Layer 6</div>
+          <h2 data-eli5="Pick the class">Softmax Prediction</h2>
+          <p class="text" data-eli5="The network gives each clothing type a confidence score. The highest one is the final answer.">
+            Final logits are converted to a normalized probability distribution using Softmax. The largest probability is selected as the predicted class.
+          </p>
+          <div class="formula">Sum of probabilities = 100%</div>
+          <details class="deep-dive">
+            <summary>Deep Dive</summary>
+            <div class="deep-dive-body">
+              <p data-eli5="Softmax turns raw scores into percentages that all add up to 100 percent.">
+                Softmax converts raw class scores into probabilities. The key rule: all probabilities add to 1 (or 100%).
+              </p>
+              <p data-eli5="The model outputs confidence, but confidence is not always perfect certainty, so calibration still matters.">
+                Highest probability becomes the prediction, but confidence is not perfect truth. A model can still be confidently wrong, so this should be interpreted as model confidence, not certainty.
+              </p>
+            </div>
+          </details>
+        </div>
+        <div class="vis">
+          <div class="softmax" id="softmax"></div>
+          <div class="legend">
+            <div class="mono" style="font-size:11px;color:var(--text);margin-bottom:8px">CLASS-COLOR LEGEND</div>
+            <div class="legend-grid" id="legend"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal after-softmax" id="sec-6">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Model Stats</div>
+          <h2>Parameter Breakdown</h2>
+          <p class="text">Reference CNN parameter profile (similar architecture to your explainer). This helps students see where model capacity actually lives.</p>
+          <div class="metric-grid">
+            <div class="metric"><div class="num" id="total-params">243,786</div><div class="lbl">Total Params</div></div>
+            <div class="metric"><div class="num">84%</div><div class="lbl">In Dense Layer</div></div>
+            <div class="metric"><div class="num">6</div><div class="lbl">Pipeline Stages</div></div>
+            <div class="metric"><div class="num">10</div><div class="lbl">Output Classes</div></div>
+          </div>
+        </div>
+        <div class="vis">
+          <div style="width:min(470px,100%)">
+            <div class="params-bars" id="params-bars"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-7">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Knowledge Check</div>
+          <h2>Quick Interactive Quiz</h2>
+          <p class="text">Short checkpoints to reinforce intuition while students explore. This section gives immediate answer feedback.</p>
+        </div>
+        <div class="vis">
+          <div style="width:min(520px,100%)">
+            <div class="quiz-wrap">
+              <div class="mono" id="quiz-counter" style="font-size:11px;color:var(--muted);margin-bottom:8px">Q1 / Q4</div>
+              <div class="quiz-q" id="quiz-q"></div>
+              <div class="quiz-opts" id="quiz-opts"></div>
+              <div class="quiz-foot">
+                <div class="quiz-fb" id="quiz-fb">Pick an answer.</div>
+                <button class="btn" id="quiz-next">Next</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card reveal" id="sec-8">
+      <div class="card-grid">
+        <div class="explain">
+          <div class="eyebrow">Common Questions</div>
+          <h2>CNN FAQ by Layer</h2>
+          <p class="text">Frequently asked questions students usually ask during layer-by-layer CNN walkthroughs.</p>
+        </div>
+        <div class="vis">
+          <div style="width:min(540px,100%)" class="faq-grid" id="faq-grid"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const labels = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"];
+    const kernel = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
+    const state = {
+      image: [],
+      convMap: [],
+      reluMap: [],
+      poolMap: [],
+      flatVec: [],
+      denseVec: [],
+      mouse: { x: 8, y: 8 },
+      eli5: false,
+      quizIdx: 0
+    };
+    const quizData = [
+      {
+        q: "Why does a 3x3 valid convolution on a 28x28 image produce 26x26 output?",
+        opts: ["Because pooling already shrinks it", "Because the kernel cannot go beyond image borders", "Because softmax removes 2 rows/cols", "Because ReLU sets edge values to zero"],
+        ans: 1,
+        fb: "Correct. With valid convolution, the kernel only slides where it fully fits: 28 - 3 + 1 = 26."
+      },
+      {
+        q: "What does Flatten do?",
+        opts: ["Learns new features", "Applies ReLU to each value", "Reshapes feature maps into a single vector", "Computes class probabilities"],
+        ans: 2,
+        fb: "Correct. Flatten is a reshape operation with no trainable parameters."
+      },
+      {
+        q: "What is the main role of Dense layers in this CNN?",
+        opts: ["Local edge detection", "Spatial downsampling", "Combining distributed features for decision making", "Pixel normalization"],
+        ans: 2,
+        fb: "Correct. Dense layers aggregate global evidence into class-separating representations."
+      },
+      {
+        q: "What does Softmax guarantee?",
+        opts: ["All logits are positive", "Probabilities sum to 1", "The model is always correct", "All classes are equally likely"],
+        ans: 1,
+        fb: "Correct. Softmax converts logits into a normalized probability distribution."
+      }
+    ];
+    const faqData = [
+      { q: "Input Layer: Why normalize pixels to 0-1?", a: "Normalization stabilizes optimization by reducing scale mismatch between activations and gradients. Training usually converges faster and more reliably." },
+      { q: "Convolution: Are filters hand-written?", a: "No. Filter weights are learned automatically through backpropagation. Training data shapes what each filter detects." },
+      { q: "ReLU: Why remove negatives?", a: "ReLU keeps strong positive matches and introduces non-linearity. Without non-linearity, stacked layers become equivalent to one linear transform." },
+      { q: "Pooling: Why max and not average?", a: "Max pooling emphasizes strongest local evidence and often gives better invariance to small translations for recognition tasks." },
+      { q: "Flatten/Dense: Why needed after conv blocks?", a: "Convolution extracts local spatial features; Dense layers combine them globally to classify the whole object." },
+      { q: "Softmax: Is confidence always reliable?", a: "Not always. High probability can still be wrong. Confidence calibration and out-of-distribution checks are important in real systems." }
+    ];
+
+    function makeStarterImage() {
+      state.image = Array.from({ length: 28 }, () => Array(28).fill(0.08));
+      for (let r = 5; r < 24; r++) for (let c = 9; c < 19; c++) state.image[r][c] = 0.72;
+      for (let r = 8; r < 11; r++) for (let c = 5; c < 23; c++) state.image[r][c] = 0.64;
+    }
+
+    function drawGridCanvas(canvasId, data, size) {
+      const ctx = document.getElementById(canvasId).getContext("2d");
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          const v = Math.max(0, Math.min(1, data[r][c]));
+          const g = Math.round(v * 255);
+          ctx.fillStyle = `rgb(${g},${g},${g})`;
+          ctx.fillRect(c * (280 / size), r * (280 / size), Math.ceil(280 / size), Math.ceil(280 / size));
+        }
+      }
+    }
+
+    function computeConvAndRelu() {
+      const conv = Array.from({ length: 26 }, () => Array(26).fill(0));
+      const relu = Array.from({ length: 26 }, () => Array(26).fill(0));
+      for (let r = 0; r < 26; r++) {
+        for (let c = 0; c < 26; c++) {
+          let s = 0;
+          for (let dr = 0; dr < 3; dr++) {
+            for (let dc = 0; dc < 3; dc++) s += state.image[r + dr][c + dc] * kernel[dr][dc];
+          }
+          conv[r][c] = s;
+          relu[r][c] = Math.max(0, s);
+        }
+      }
+      state.convMap = conv;
+      state.reluMap = relu;
+      const pool = Array.from({ length: 13 }, () => Array(13).fill(0));
+      for (let r = 0; r < 13; r++) {
+        for (let c = 0; c < 13; c++) {
+          const a = relu[r * 2][c * 2];
+          const b = relu[r * 2][c * 2 + 1];
+          const d = relu[r * 2 + 1][c * 2];
+          const e = relu[r * 2 + 1][c * 2 + 1];
+          pool[r][c] = Math.max(a, b, d, e);
+        }
+      }
+      state.poolMap = pool;
+      state.flatVec = pool.flat();
+      const dense = [];
+      for (let i = 0; i < 32; i++) {
+        const idx = (i * 5) % state.flatVec.length;
+        const a = state.flatVec[idx];
+        const b = state.flatVec[(idx + 29) % state.flatVec.length];
+        dense.push(Math.max(0, a * 0.9 + b * 0.55 - 0.2));
+      }
+      state.denseVec = dense;
+    }
+
+    function drawConvMap() {
+      const ctx = document.getElementById("conv").getContext("2d");
+      let max = 0;
+      for (const row of state.reluMap) for (const v of row) if (v > max) max = v;
+      max = max || 1;
+      for (let r = 0; r < 26; r++) {
+        for (let c = 0; c < 26; c++) {
+          const n = state.reluMap[r][c] / max;
+          const rr = Math.round(35 + n * 220);
+          const gg = Math.round(30 + n * 110);
+          const bb = Math.round(45 + n * 70);
+          ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
+          ctx.fillRect(c * (280 / 26), r * (280 / 26), Math.ceil(280 / 26), Math.ceil(280 / 26));
+        }
+      }
+    }
+
+    function updateScannerAndReadout() {
+      const px = 280 / 26;
+      const scanner = document.getElementById("scanner");
+      scanner.style.left = `${state.mouse.x * px}px`;
+      scanner.style.top = `${state.mouse.y * px}px`;
+      scanner.style.width = `${px}px`;
+      scanner.style.height = `${px}px`;
+
+      let sum = 0;
+      const parts = [];
+      for (let dr = 0; dr < 3; dr++) {
+        for (let dc = 0; dc < 3; dc++) {
+          const p = state.image[state.mouse.y + dr][state.mouse.x + dc];
+          const w = kernel[dr][dc];
+          sum += p * w;
+          parts.push(`${p.toFixed(2)}*${w}`);
+        }
+      }
+      document.getElementById("readout").textContent =
+        `Patch (${state.mouse.x}, ${state.mouse.y})\n` +
+        `${parts.slice(0, 4).join(" + ")} + ...\n` +
+        `feature-map cell=${sum.toFixed(3)} -> relu=${Math.max(0, sum).toFixed(3)}`;
+    }
+
+    function buildSteps() {
+      const names = ["Input", "Conv+ReLU", "Pooling", "Flatten", "Dense", "Softmax"];
+      const steps = document.getElementById("steps");
+      const mini = document.getElementById("mini-map");
+      names.forEach((name, i) => {
+        const el = document.createElement("div");
+        el.className = "step" + (i === 0 ? " active" : "");
+        el.textContent = `Step ${i + 1}: ${name}`;
+        el.onclick = () => {
+          const target = document.getElementById(`sec-${i}`);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+        steps.appendChild(el);
+        const dot = document.createElement("div");
+        dot.className = "mini-dot" + (i === 0 ? " active" : "");
+        dot.onclick = () => {
+          const target = document.getElementById(`sec-${i}`);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        };
+        mini.appendChild(dot);
+      });
+      window.addEventListener("scroll", () => {
+        const sections = [0, 1, 2, 3, 4, 5].map(i => document.getElementById(`sec-${i}`));
+        let active = 0;
+        sections.forEach((s, i) => {
+          const r = s.getBoundingClientRect();
+          if (r.top < window.innerHeight * 0.45) active = i;
+        });
+        [...steps.children].forEach((c, i) => c.classList.toggle("active", i === active));
+        [...mini.children].forEach((c, i) => c.classList.toggle("active", i === active));
+      });
+    }
+
+    function renderPoolVis() {
+      const grid = document.getElementById("pool-grid");
+      const vals = Array.from({ length: 36 }, () => Math.floor(Math.random() * 89) + 10);
+      grid.innerHTML = vals.map((v, idx) => `<div class="pool-cell" id="pc-${idx}" style="background:rgba(53,214,154,${v/120})">${v}</div>`).join("");
+      const blocks = [[0,1,6,7],[2,3,8,9],[4,5,10,11],[12,13,18,19],[14,15,20,21],[16,17,22,23],[24,25,30,31],[26,27,32,33],[28,29,34,35]];
+      let i = 0;
+      setInterval(() => {
+        for (let j = 0; j < 36; j++) document.getElementById(`pc-${j}`).style.outline = "none";
+        blocks[i].forEach(id => document.getElementById(`pc-${id}`).style.outline = "2px solid var(--cyan)");
+        i = (i + 1) % blocks.length;
+      }, 650);
+    }
+
+    function softmax(arr) {
+      const m = Math.max(...arr);
+      const exps = arr.map(v => Math.exp(v - m));
+      const s = exps.reduce((a,b) => a + b, 0);
+      return exps.map(v => v / s);
+    }
+
+    function renderSoftmax() {
+      const energy = state.flatVec.reduce((a, b) => a + b, 0);
+      const center = state.poolMap.slice(4, 9).reduce((acc, row) => acc + row.slice(4, 9).reduce((a, b) => a + b, 0), 0);
+      const leftRight = state.poolMap.reduce((acc, row) => acc + row.slice(0, 6).reduce((a, b) => a + b, 0) - row.slice(7).reduce((a, b) => a + b, 0), 0);
+      const hiddenEnergy = state.denseVec.reduce((a, b) => a + b, 0);
+      const seed = [energy, center, Math.abs(leftRight), hiddenEnergy, center * 0.6, energy * 0.35, Math.abs(leftRight) * 0.8, hiddenEnergy * 0.75, energy * 0.22, center * 0.33];
+      const probs = softmax(seed.map((v, i) => v / 18 + (i === 7 ? 0.4 : 0)));
+      const winner = probs.indexOf(Math.max(...probs));
+
+      const root = document.getElementById("softmax");
+      root.innerHTML = "";
+      probs.forEach((p, i) => {
+        const row = document.createElement("div");
+        row.className = "bar-row";
+        row.innerHTML = `
+          <div class="mono" style="font-size:10px;color:var(--muted);text-align:right">${labels[i]}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(p*100).toFixed(1)}%"></div></div>
+          <div class="mono" style="font-size:10px;color:var(--cyan)">${(p*100).toFixed(0)}%</div>
+        `;
+        root.appendChild(row);
+      });
+      const win = document.createElement("div");
+      win.className = "winner";
+      win.textContent = `Prediction: ${labels[winner]} (${(probs[winner]*100).toFixed(1)}%)`;
+      root.appendChild(win);
+    }
+
+    function renderFlatten() {
+      const host = document.getElementById("flat-bars");
+      host.innerHTML = "";
+      const slice = state.flatVec.slice(0, 44);
+      const max = Math.max(...slice, 0.0001);
+      slice.forEach((v, idx) => {
+        const h = document.createElement("div");
+        h.className = "flat-bar";
+        h.style.height = `${14 + (v / max) * 95}px`;
+        h.style.transform = `translateY(${Math.sin((Date.now() / 600) + idx * 0.25) * -2}px)`;
+        host.appendChild(h);
+      });
+    }
+
+    function renderDense() {
+      const svg = document.getElementById("dense-svg");
+      if (!svg || svg.children.length) return;
+      const inN = 10, hidN = 7, outN = 5;
+      const x1 = 60, x2 = 210, x3 = 360;
+      const yPos = (i, n) => 24 + (i * (180 / (n - 1)));
+      let html = "";
+      for (let i = 0; i < inN; i++) {
+        for (let j = 0; j < hidN; j++) html += `<line class="dline" x1="${x1}" y1="${yPos(i, inN)}" x2="${x2}" y2="${yPos(j, hidN)}"></line>`;
+      }
+      for (let j = 0; j < hidN; j++) {
+        for (let k = 0; k < outN; k++) html += `<line class="dline" x1="${x2}" y1="${yPos(j, hidN)}" x2="${x3}" y2="${yPos(k, outN)}"></line>`;
+      }
+      for (let i = 0; i < inN; i++) html += `<circle class="dcircle" id="din-${i}" cx="${x1}" cy="${yPos(i, inN)}" r="6"></circle>`;
+      for (let j = 0; j < hidN; j++) html += `<circle class="dcircle" id="dh-${j}" cx="${x2}" cy="${yPos(j, hidN)}" r="7"></circle>`;
+      for (let k = 0; k < outN; k++) html += `<circle class="dcircle" id="do-${k}" cx="${x3}" cy="${yPos(k, outN)}" r="7"></circle>`;
+      html += `<text x="${x1}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">flat in</text>`;
+      html += `<text x="${x2}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">hidden</text>`;
+      html += `<text x="${x3}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">logits</text>`;
+      svg.innerHTML = html;
+    }
+
+    function animateDense() {
+      const circles = document.querySelectorAll(".dcircle");
+      if (!circles.length) return;
+      circles.forEach(c => c.classList.remove("live"));
+      const i = Math.floor(Math.random() * 10);
+      const h = Math.floor(Math.random() * 7);
+      const o = Math.floor(Math.random() * 5);
+      document.getElementById(`din-${i}`)?.classList.add("live");
+      setTimeout(() => document.getElementById(`dh-${h}`)?.classList.add("live"), 120);
+      setTimeout(() => document.getElementById(`do-${o}`)?.classList.add("live"), 240);
+    }
+
+    function renderLegend() {
+      const colors = ["#8f6fff", "#4fc3ff", "#b67bff", "#45d7b2", "#3eb28c", "#ff9a6b", "#45c7ff", "#45de8d", "#d086ff", "#31b2ff"];
+      const root = document.getElementById("legend");
+      root.innerHTML = "";
+      labels.forEach((name, i) => {
+        const row = document.createElement("div");
+        row.innerHTML = `<span class="sw" style="background:${colors[i]}"></span>${name}`;
+        root.appendChild(row);
+      });
+    }
+
+    function renderParams() {
+      const data = [
+        { name: "Conv2D Layer 1", value: 640, color: "#ff9a6b" },
+        { name: "Conv2D Layer 2", value: 36928, color: "#ff7d4f" },
+        { name: "Dense 128", value: 204928, color: "#c68bff" },
+        { name: "Softmax 10", value: 1290, color: "#45de8d" }
+      ];
+      const total = data.reduce((a, b) => a + b.value, 0);
+      const host = document.getElementById("params-bars");
+      host.innerHTML = "";
+      data.forEach((d, i) => {
+        const row = document.createElement("div");
+        row.className = "p-row";
+        row.innerHTML = `
+          <div class="mono" style="font-size:10px;color:var(--muted)">${d.name}</div>
+          <div class="p-track"><div class="p-fill" id="pfill-${i}" style="background:${d.color}"></div></div>
+          <div class="mono" style="font-size:10px;color:var(--text);text-align:right">${d.value.toLocaleString()}</div>
+        `;
+        host.appendChild(row);
+      });
+      setTimeout(() => {
+        data.forEach((d, i) => {
+          const fill = document.getElementById(`pfill-${i}`);
+          if (fill) fill.style.width = `${(d.value / total) * 100}%`;
+        });
+      }, 120);
+    }
+
+    function renderQuiz() {
+      const q = quizData[state.quizIdx];
+      document.getElementById("quiz-counter").textContent = `Q${state.quizIdx + 1} / Q${quizData.length}`;
+      document.getElementById("quiz-q").textContent = q.q;
+      const host = document.getElementById("quiz-opts");
+      host.innerHTML = "";
+      document.getElementById("quiz-fb").textContent = "Pick an answer.";
+      q.opts.forEach((opt, idx) => {
+        const b = document.createElement("button");
+        b.className = "quiz-opt";
+        b.textContent = opt;
+        b.onclick = () => {
+          [...host.children].forEach(c => c.disabled = true);
+          b.classList.add(idx === q.ans ? "good" : "bad");
+          if (idx !== q.ans && host.children[q.ans]) host.children[q.ans].classList.add("good");
+          document.getElementById("quiz-fb").textContent = idx === q.ans ? q.fb : `Not quite. ${q.fb}`;
+        };
+        host.appendChild(b);
+      });
+    }
+
+    function setupQuiz() {
+      renderQuiz();
+      document.getElementById("quiz-next").addEventListener("click", () => {
+        state.quizIdx = (state.quizIdx + 1) % quizData.length;
+        renderQuiz();
+      });
+    }
+
+    function setupFaq() {
+      const host = document.getElementById("faq-grid");
+      host.innerHTML = "";
+      faqData.forEach(item => {
+        const box = document.createElement("div");
+        box.className = "faq-item";
+        box.innerHTML = `<button class="faq-q">${item.q}</button><div class="faq-a">${item.a}</div>`;
+        box.querySelector(".faq-q").addEventListener("click", () => box.classList.toggle("open"));
+        host.appendChild(box);
+      });
+    }
+
+    function setupUpload() {
+      document.getElementById("upload").addEventListener("change", e => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const rd = new FileReader();
+        rd.onload = evt => {
+          const img = new Image();
+          img.onload = () => {
+            const cv = document.createElement("canvas");
+            cv.width = 28; cv.height = 28;
+            const ctx = cv.getContext("2d");
+            ctx.drawImage(img, 0, 0, 28, 28);
+            const px = ctx.getImageData(0, 0, 28, 28).data;
+            for (let r = 0; r < 28; r++) {
+              for (let c = 0; c < 28; c++) {
+                const i = (r * 28 + c) * 4;
+                state.image[r][c] = (px[i] + px[i + 1] + px[i + 2]) / 3 / 255;
+              }
+            }
+            rerenderAll();
+          };
+          img.src = evt.target.result;
+        };
+        rd.readAsDataURL(file);
+      });
+    }
+
+    function setupELI5() {
+      const btn = document.getElementById("mode-btn");
+      btn.addEventListener("click", () => {
+        state.eli5 = !state.eli5;
+        btn.textContent = state.eli5 ? "Expert Mode" : "ELI5 Mode";
+        document.querySelectorAll("[data-eli5]").forEach(el => {
+          if (!el.dataset.orig) el.dataset.orig = el.textContent;
+          el.textContent = state.eli5 ? el.getAttribute("data-eli5") : el.dataset.orig;
+        });
+      });
+    }
+
+    function initConvHover() {
+      const cv = document.getElementById("conv");
+      cv.addEventListener("mousemove", e => {
+        const rect = cv.getBoundingClientRect();
+        const x = Math.floor((e.clientX - rect.left) / (280 / 26));
+        const y = Math.floor((e.clientY - rect.top) / (280 / 26));
+        state.mouse.x = Math.min(25, Math.max(0, x));
+        state.mouse.y = Math.min(25, Math.max(0, y));
+        updateScannerAndReadout();
+      });
+    }
+
+    function drawHeroBackground() {
+      const canvas = document.getElementById("hero-canvas");
+      const ctx = canvas.getContext("2d");
+      const particles = Array.from({ length: 75 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35
+      }));
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = Math.max(460, window.innerHeight * 0.88);
+      }
+      resize();
+      window.addEventListener("resize", resize);
+      function tick() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "rgba(41,223,255,0.06)";
+        for (let x = 0; x < canvas.width; x += 80) {
+          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+        }
+        for (const p of particles) {
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+          if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(41,223,255,0.45)";
+          ctx.fill();
+        }
+        requestAnimationFrame(tick);
+      }
+      tick();
+    }
+
+    function rerenderAll() {
+      computeConvAndRelu();
+      drawGridCanvas("input", state.image, 28);
+      drawConvMap();
+      updateScannerAndReadout();
+      renderFlatten();
+      renderDense();
+      renderSoftmax();
+      renderLegend();
+      renderParams();
+    }
+
+    function setupReveal() {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) entry.target.classList.add("in");
+        });
+      }, { threshold: 0.2 });
+      document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
+    }
+
+    function init() {
+      makeStarterImage();
+      buildSteps();
+      setupUpload();
+      setupELI5();
+      initConvHover();
+      renderPoolVis();
+      drawHeroBackground();
+      setupReveal();
+      setupQuiz();
+      setupFaq();
+      rerenderAll();
+      setInterval(animateDense, 500);
+    }
+    init();
+  </script>
+</body>
+</html>
