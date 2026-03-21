@@ -127,11 +127,16 @@
       border-bottom: 1px solid var(--border);
     }
     .steps {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(130px, 1fr));
+      display: flex;
       gap: 8px;
-      padding: 12px 0;
+      padding: 12px 16px;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      width: 100%;
     }
+    .steps::-webkit-scrollbar { display: none; }
     .step {
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -304,6 +309,10 @@
       from { transform: rotateX(-22deg) rotateY(0deg); }
       to { transform: rotateX(-22deg) rotateY(360deg); }
     }
+    @media (prefers-reduced-motion: reduce) {
+      .cube3d { animation: none; transform: rotateX(-22deg) rotateY(35deg); }
+      .flat-bar, .reveal { transition: none !important; animation: none !important; transform: none !important; opacity: 1 !important; }
+    }
     .face {
       position: absolute;
       width: 92px;
@@ -444,8 +453,10 @@
       <p class="hero-sub">A live layer-by-layer CNN walkthrough: upload your own image, inspect convolution math in real time, and watch probability outputs update.</p>
       <div class="hero-actions">
         <label class="btn btn-primary">Upload Image <input id="upload" type="file" accept="image/*" hidden></label>
+        <button class="btn" id="btn-preset-stripes">Stripes</button>
+        <button class="btn" id="btn-preset-circle">Circle</button>
         <button class="btn" id="mode-btn">ELI5 Mode</button>
-        <button class="btn" onclick="document.getElementById('sec-1').scrollIntoView({behavior:'smooth'})">Start Exploring</button>
+        <button class="btn" onclick="document.getElementById('sec-0').scrollIntoView({behavior:'smooth'})">Start Exploring</button>
       </div>
     </div>
   </section>
@@ -493,6 +504,7 @@
           <h2 data-eli5="Pattern scanner">Convolution + ReLU</h2>
           <p class="text" data-eli5="A tiny 3x3 scanner moves across the image. It gives high scores when it sees the edge pattern it likes.">
             A 3x3 kernel slides over every valid location and computes a dot product (sum of weight x pixel). ReLU then applies max(0, x) to keep useful activations and suppress negatives.
+            <br><br><em style="font-size:14px;color:var(--cyan)">Note: Real CNNs stack multiple Conv+ReLU blocks (e.g., Conv2D Layer 2 in our stats) to learn increasingly complex feature combinations.</em>
           </p>
           <div class="formula">Output: 26 x 26 after valid convolution</div>
           <details class="deep-dive">
@@ -508,6 +520,12 @@
           </details>
         </div>
         <div class="vis">
+          <div style="display:flex; gap: 16px; margin-bottom: 16px; align-items:center;">
+            <div id="kernel-editor" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; background:rgba(0,0,0,0.3); padding:8px; border-radius:8px; border:1px solid var(--border);"></div>
+            <div style="font-size:11px; color:var(--muted); max-width: 140px; line-height:1.4;">
+               Click cells to edit the kernel weights & watch the feature map change live.
+            </div>
+          </div>
           <div class="conv-wrap panel" id="conv-wrap">
             <canvas id="conv" width="280" height="280"></canvas>
             <div id="scanner"></div>
@@ -580,7 +598,7 @@
                   <div class="face f6">feat</div>
                 </div>
               </div>
-              <div class="flat-arrow">-></div>
+              <svg class="flat-arrow" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan); opacity:0.7;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               <div class="flat-bars" id="flat-bars"></div>
             </div>
             <div class="mono" style="font-size:10px;color:var(--muted)">3D FEATURES -> 1D VECTOR</div>
@@ -642,6 +660,7 @@
         </div>
         <div class="vis">
           <div class="softmax" id="softmax"></div>
+          <div style="font-size:10px; color:var(--muted); margin-top:14px; text-align:center;">Note: This is a simplified heuristic model based on pixel statistics, so predictions are illustrative.</div>
           <div class="legend">
             <div class="mono" style="font-size:11px;color:var(--text);margin-bottom:8px">CLASS-COLOR LEGEND</div>
             <div class="legend-grid" id="legend"></div>
@@ -710,7 +729,7 @@
 
   <script>
     const labels = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"];
-    const kernel = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
+    let kernel = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
     const state = {
       image: [],
       convMap: [],
@@ -854,7 +873,7 @@
     }
 
     function buildSteps() {
-      const names = ["Input", "Conv+ReLU", "Pooling", "Flatten", "Dense", "Softmax"];
+      const names = ["Input", "Conv+ReLU", "Pooling", "Flatten", "Dense", "Softmax", "Stats", "Quiz", "FAQ"];
       const steps = document.getElementById("steps");
       const mini = document.getElementById("mini-map");
       names.forEach((name, i) => {
@@ -875,7 +894,7 @@
         mini.appendChild(dot);
       });
       window.addEventListener("scroll", () => {
-        const sections = [0, 1, 2, 3, 4, 5].map(i => document.getElementById(`sec-${i}`));
+        const sections = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => document.getElementById(`sec-${i}`));
         let active = 0;
         sections.forEach((s, i) => {
           const r = s.getBoundingClientRect();
@@ -886,13 +905,23 @@
       });
     }
 
+    let poolInterval;
     function renderPoolVis() {
       const grid = document.getElementById("pool-grid");
-      const vals = Array.from({ length: 36 }, () => Math.floor(Math.random() * 89) + 10);
-      grid.innerHTML = vals.map((v, idx) => `<div class="pool-cell" id="pc-${idx}" style="background:rgba(53,214,154,${v/120})">${v}</div>`).join("");
+      if (!state.reluMap || !state.reluMap.length) return;
+      
+      const vals = [];
+      const maxRelu = Math.max(...state.reluMap.flat(), 0.001);
+      for(let r=0; r<6; r++) {
+         for(let c=0; c<6; c++) {
+            vals.push(state.reluMap[r][c] / maxRelu);
+         }
+      }
+      grid.innerHTML = vals.map((v, idx) => `<div class="pool-cell" id="pc-${idx}" style="background:rgba(53,214,154,${v})">${(v*100).toFixed(0)}</div>`).join("");
       const blocks = [[0,1,6,7],[2,3,8,9],[4,5,10,11],[12,13,18,19],[14,15,20,21],[16,17,22,23],[24,25,30,31],[26,27,32,33],[28,29,34,35]];
       let i = 0;
-      setInterval(() => {
+      if (poolInterval) clearInterval(poolInterval);
+      poolInterval = setInterval(() => {
         for (let j = 0; j < 36; j++) document.getElementById(`pc-${j}`).style.outline = "none";
         blocks[i].forEach(id => document.getElementById(`pc-${id}`).style.outline = "2px solid var(--cyan)");
         i = (i + 1) % blocks.length;
@@ -911,8 +940,20 @@
       const center = state.poolMap.slice(4, 9).reduce((acc, row) => acc + row.slice(4, 9).reduce((a, b) => a + b, 0), 0);
       const leftRight = state.poolMap.reduce((acc, row) => acc + row.slice(0, 6).reduce((a, b) => a + b, 0) - row.slice(7).reduce((a, b) => a + b, 0), 0);
       const hiddenEnergy = state.denseVec.reduce((a, b) => a + b, 0);
-      const seed = [energy, center, Math.abs(leftRight), hiddenEnergy, center * 0.6, energy * 0.35, Math.abs(leftRight) * 0.8, hiddenEnergy * 0.75, energy * 0.22, center * 0.33];
-      const probs = softmax(seed.map((v, i) => v / 18 + (i === 7 ? 0.4 : 0)));
+      const hash = state.image.flat().reduce((a,b)=>a+b,0);
+      const seed = [
+        energy, 
+        center + Math.sin(hash)*10, 
+        Math.abs(leftRight) + Math.cos(hash)*10, 
+        hiddenEnergy, 
+        (center * 0.6) + Math.sin(hash*2)*5, 
+        energy * 0.35, 
+        (Math.abs(leftRight) * 0.8) + Math.cos(hash*3)*8, 
+        (hiddenEnergy * 0.75) + (hash%5), 
+        (energy * 0.22) + (hash%3), 
+        center * 0.33
+      ];
+      const probs = softmax(seed.map(v => v / 18));
       const winner = probs.indexOf(Math.max(...probs));
 
       const root = document.getElementById("softmax");
@@ -933,23 +974,39 @@
       root.appendChild(win);
     }
 
+    let flattenReq;
     function renderFlatten() {
       const host = document.getElementById("flat-bars");
+      if (!host || !state.flatVec) return;
+      if (flattenReq) cancelAnimationFrame(flattenReq);
       host.innerHTML = "";
       const slice = state.flatVec.slice(0, 44);
       const max = Math.max(...slice, 0.0001);
       slice.forEach((v, idx) => {
         const h = document.createElement("div");
         h.className = "flat-bar";
-        h.style.height = `${14 + (v / max) * 95}px`;
-        h.style.transform = `translateY(${Math.sin((Date.now() / 600) + idx * 0.25) * -2}px)`;
+        h.dataset.h = 14 + (v / max) * 95;
+        h.dataset.idx = idx;
+        h.style.height = `${h.dataset.h}px`;
         host.appendChild(h);
       });
+      function animate() {
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          const t = Date.now() / 600;
+          [...host.children].forEach(h => {
+             const idx = parseFloat(h.dataset.idx);
+             h.style.transform = `translateY(${Math.sin(t + idx * 0.25) * -4}px)`;
+          });
+        }
+        flattenReq = requestAnimationFrame(animate);
+      }
+      animate();
     }
 
     function renderDense() {
       const svg = document.getElementById("dense-svg");
-      if (!svg || svg.children.length) return;
+      if (!svg) return;
+      svg.innerHTML = "";
       const inN = 10, hidN = 7, outN = 5;
       const x1 = 60, x2 = 210, x3 = 360;
       const yPos = (i, n) => 24 + (i * (180 / (n - 1)));
@@ -1061,6 +1118,46 @@
       });
     }
 
+    function renderKernelEditor() {
+       const ed = document.getElementById("kernel-editor");
+       if (!ed) return;
+       ed.innerHTML = "";
+       for(let r=0; r<3; r++) {
+          for(let c=0; c<3; c++) {
+             const v = kernel[r][c];
+             const cell = document.createElement("div");
+             cell.style.cssText = `width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; cursor:pointer; border-radius:4px; font-weight:bold; ${v>0?'background:rgba(53,214,154,0.2);color:var(--green)':v<0?'background:rgba(255,138,76,0.2);color:var(--orange)':'background:rgba(255,255,255,0.1);color:var(--muted)'}`;
+             cell.textContent = v;
+             cell.onclick = () => {
+                kernel[r][c] = v === 1 ? 0 : v === 0 ? -1 : 1;
+                renderKernelEditor();
+                rerenderAll();
+             };
+             ed.appendChild(cell);
+          }
+       }
+    }
+
+    function setupPresets() {
+      document.getElementById("btn-preset-stripes").addEventListener("click", () => {
+        for (let r = 0; r < 28; r++) {
+          for (let c = 0; c < 28; c++) {
+            state.image[r][c] = (c % 4 < 2) ? 0.8 : 0.1;
+          }
+        }
+        rerenderAll();
+      });
+      document.getElementById("btn-preset-circle").addEventListener("click", () => {
+        for (let r = 0; r < 28; r++) {
+          for (let c = 0; c < 28; c++) {
+            const dist = Math.hypot(r - 14, c - 14);
+            state.image[r][c] = (dist > 6 && dist < 10) ? 0.9 : 0.1;
+          }
+        }
+        rerenderAll();
+      });
+    }
+
     function setupUpload() {
       document.getElementById("upload").addEventListener("change", e => {
         const file = e.target.files && e.target.files[0];
@@ -1128,6 +1225,14 @@
       resize();
       window.addEventListener("resize", resize);
       function tick() {
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+           ctx.clearRect(0, 0, canvas.width, canvas.height);
+           ctx.strokeStyle = "rgba(41,223,255,0.06)";
+           for (let x = 0; x < canvas.width; x += 80) {
+             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+           }
+           return;
+        }
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.strokeStyle = "rgba(41,223,255,0.06)";
         for (let x = 0; x < canvas.width; x += 80) {
@@ -1172,7 +1277,9 @@
       makeStarterImage();
       buildSteps();
       setupUpload();
+      setupPresets();
       setupELI5();
+      renderKernelEditor();
       initConvHover();
       renderPoolVis();
       drawHeroBackground();

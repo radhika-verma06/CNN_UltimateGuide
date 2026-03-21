@@ -9,7 +9,8 @@ An interactive CNN learning experience that explains how convolutional networks 
 - **GitHub Pages App:** https://radhika-verma06.github.io/CNN_UltimateGuide/cnn_lab_ultimate.html
 - Students can open this link directly in any browser (no clone, no install).
 
-![Project Preview Placeholder](https://via.placeholder.com/800x400.png?text=CNN+Interpretability+Lab+Dashboard)
+![CNN Lab Showcase](preview.png)
+> *Note: Upload a preview.png of the lab to your repo for this image to render on GitHub.*
 
 ## 🌟 Key Features
 
@@ -101,3 +102,14 @@ cnn_lab/
 ---
 
 *Developed by Radhika // 2026*
+
+
+## 💡 What I Learned Building This
+
+- **Visualizing Black Boxes**: Bridging the gap between raw tensor math and intuitive visualizations requires careful UI mapping (e.g., building a live `requestAnimationFrame` loop to animate flatten operations).
+- **Interactive Educational Tools**: Moving from static charts to an editable convolution kernel significantly deepens user engagement.
+- **Client-Side CNN Simulation**: Writing a mini-inference engine purely in Javascript (performing convolution, pooling, and dense passes) was a great exercise in understanding tensor operations from the ground up without relying on PyTorch/TensorFlow.
+
+---
+
+**Tags:** `machine-learning`, `cnn`, `interactive`, `visualization`, `vanilla-js`, `education`, `portfolio`
