@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pth
+*.json
+!package.json
+.DS_Store

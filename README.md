@@ -1,115 +1,79 @@
-# 🔬 CNN Interpretability Lab
+# CNN Ultimate Guide 🧠
 
-An interactive CNN learning experience that explains how convolutional networks process images, from input tensor to softmax output. This repo includes:
-- a **live static web walkthrough** (`cnn_lab_ultimate.html`) for students
-- a **Python + Streamlit + PyTorch** lab stack for deeper experimentation
+An interactive, visual guide to **Convolutional Neural Networks** — covering architecture, training, generalization, and regularization. Built as a single self-contained HTML file with zero dependencies.
 
-## 🌐 Live Student Version (No Setup Required)
+## ✨ Features
 
-- **GitHub Pages App:** https://radhika-verma06.github.io/CNN_UltimateGuide/cnn_lab_ultimate.html
-- Students can open this link directly in any browser (no clone, no install).
+### CNN Architecture (Interactive)
+- **Input Image** — toggle between sample patterns (shoe, bag, shirt) displayed as 28×28 pixel grids
+- **Convolution** — animated kernel scan with switchable filters (Edge, Blur, Sharpen) and live dot-product readout
+- **Max Pooling** — step-through animation showing 2×2 window selection
+- **Flatten** — animated 2D-to-1D vector transformation
+- **Dense Layers** — neural network forward-pass visualization
+- **Softmax Output** — prediction bars linked to the selected input
 
-![CNN Lab Showcase](preview.png)
-> *Note: Upload a preview.png of the lab to your repo for this image to render on GitHub.*
+### Training Loop
+- Step-by-step pipeline: Forward Pass → Loss → Backprop → Weight Update → Repeat
+- Live weight update animation
+- Progressive epoch training with animated loss/accuracy chart
+- Toggle to show train vs. validation curves
 
-## 🌟 Key Features
+### Bias vs Variance
+- Interactive 3-mode switcher (Underfit / Good Fit / Overfit) with live chart updates
+- **Dartboard analogy** — 4 SVG boards visually demonstrating bias-variance combinations
+- Each board has a "Re-throw" button for re-randomization
 
-### 1. **Dual-Lens Perspective**
-- **Lab Mode (Educational)**: Detailed deep-dive into a 2-layer CNN trained on Fashion-MNIST. Perfect for learning how filters detect edges and textures.
-- **Pro Mode (Generalist)**: Leverages a pretrained **MobileNet-V3** to classify and explain 1,000+ real-world object categories from any uploaded image.
+### Dropout Regularization
+- 24-neuron grid with Training / Inference mode toggle
+- Adjustable dropout rate slider (0–70%)
+- Visual comparison: with vs. without dropout
 
-### 2. **Explainable AI (XAI)**
+### Extras
+- 6-question interactive quiz with instant feedback
+- FAQ accordion with key CNN concepts
+- Animated stat counters (parameters, epochs, accuracy, loss)
+- Fixed navbar with section links + scroll progress bar
+- Section reveal-on-scroll animations
+- Fully responsive (desktop + mobile)
 
-### 2. **Live Feature Extraction**
-- **Activation Maps**: Real-time visualization of all 16 filters in Conv-1 and 32 filters in Conv-2.
-- **Hooked Architecture**: Captures intermediate activations during the forward pass.
+## 🚀 Quick Start
 
-### 3. **Interactive Convolution Lab**
-- **Math Walkthrough**: Slide a 3x3 kernel over your input image and see the dot-product calculations update live.
-- **ReLU Visualization**: Understand how activation functions suppress noise and highlight features.
+Just open the file in any browser:
 
-### 4. **Cinematic UI & Experience**
-- **Premium Aesthetics**: High-end typography (Syne), noise textures, and glassmorphic elements.
-- **Visual Pipeline**: A horizontal track visualizing the data flow across all layers.
-- **Interactive Math**: A high-fidelity "Filter Explorer" with real-time dot product and ReLU calculation.
-
----
-
-## 🛠 Tech Stack
-- **Backend:** PyTorch, Torchvision
-- **Frontend:** Streamlit, Custom CSS
-- **Visuals:** Matplotlib, Plotly, OpenCV
-- **Data:** Fashion-MNIST
-
----
-
-## 🚀 How to Run Locally
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/cnn-interpretability-lab.git
-   cd cnn-interpretability-lab
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Train the model (optional):**
-   *(The project includes a pre-trained weights script)*
-   ```bash
-   python train_model.py
-   ```
-
-4. **Launch the Lab:**
-   ```bash
-   streamlit run app.py
-   ```
-
-### Run the Interactive HTML Version Locally
-
-```bash
-python3 -m http.server 8000
+```
+open cnn_lab_ultimate.html
 ```
 
-Then open:
+No server, no install, no dependencies needed.
 
-`http://localhost:8000/cnn_lab_ultimate.html`
+## 🛠 Tech
 
----
+- **Zero dependencies** — pure HTML + CSS + JavaScript
+- Single file (~80KB)
+- CSS custom properties, glassmorphism cards, gradient palette
+- Canvas + SVG for all visualizations
+- Intersection Observer for scroll animations
 
-## 📂 Project Structure
-```text
-cnn_lab/
-├── cnn_lab_ultimate.html # Final interactive student-facing CNN walkthrough
-├── cnn_explainer_v3.html # Earlier v3 visual version
-├── app.py              # Main Streamlit entrance
-├── model.py            # CNN Architecture & Preprocessing
-├── interpretability.py # Grad-CAM & Saliency logic
-├── visualization.py    # Plotting & CSS helpers
-├── train_model.py      # Training script
-├── requirements.txt    # Dependencies
-└── fashion_mnist_cnn.pth # Saved weights
-```
+## 📚 Topics Covered
 
-## 🧠 Future Improvements
-- [ ] Support for CIFAR-10 (Color images)
-- [ ] Real-time Webcam inference
-- [ ] Lime / SHAP integration for feature attribution comparison
-- [ ] Exportable PDF reports for model analysis
+| Concept | Section |
+|---|---|
+| Convolution & Filters | Conv |
+| Feature Maps & ReLU | Conv |
+| Max Pooling | Pool |
+| Flattening | Flatten |
+| Fully Connected Layers | Dense |
+| Softmax & Probabilities | Output |
+| Training Loop & Epochs | Training |
+| Loss & Backpropagation | Training |
+| Bias vs Variance | Bias/Var |
+| Overfitting & Underfitting | Bias/Var |
+| Dropout Regularization | Dropout |
 
----
+## Tags
 
-*Developed by Radhika // 2026*
-
-
-## 💡 What I Learned Building This
-
-- **Visualizing Black Boxes**: Bridging the gap between raw tensor math and intuitive visualizations requires careful UI mapping (e.g., building a live `requestAnimationFrame` loop to animate flatten operations).
-- **Interactive Educational Tools**: Moving from static charts to an editable convolution kernel significantly deepens user engagement.
-- **Client-Side CNN Simulation**: Writing a mini-inference engine purely in Javascript (performing convolution, pooling, and dense passes) was a great exercise in understanding tensor operations from the ground up without relying on PyTorch/TensorFlow.
+`CNN` `Deep Learning` `Neural Networks` `Interactive` `Visualization` `Education` `Training` `Bias-Variance` `Dropout` `Regularization` `HTML` `CSS` `JavaScript` `No Dependencies`
 
 ---
 
-**Tags:** `machine-learning`, `cnn`, `interactive`, `visualization`, `vanilla-js`, `education`, `portfolio`
+*Built as an interactive deep learning concept visualizer.*
