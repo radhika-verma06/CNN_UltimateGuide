@@ -1,1295 +1,1577 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CNN Interactive Lab Ultimate</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #060712;
-      --bg-2: #0b1023;
-      --card: rgba(18, 24, 50, 0.75);
-      --border: rgba(255, 255, 255, 0.12);
-      --text: #f6f8ff;
-      --muted: #b3bddd;
-      --cyan: #29dfff;
-      --violet: #9d6bff;
-      --orange: #ff8a4c;
-      --green: #35d69a;
-      --mono: "JetBrains Mono", monospace;
-      --display: "Space Grotesk", sans-serif;
-      --body: "Outfit", sans-serif;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CNN Ultimate Guide — Interactive Visual Deep Learning</title>
+<meta name="description" content="An interactive visual guide to convolutional neural networks, training, bias vs variance, and dropout regularization.">
+<style>
+:root{
+  --bg:#060712;--bg2:#0b1023;--text:#f0f4ff;--muted:#a4b0d4;
+  --border:rgba(255,255,255,.1);--card:rgba(255,255,255,.03);
+  --cyan:#29dfff;--violet:#9d6bff;--orange:#ff8a4c;--green:#35d69a;--red:#ff5c6c;
+  --glass:rgba(12,15,30,.72);--shadow:0 12px 48px rgba(0,0,0,.5);
+  --font:'Segoe UI',system-ui,-apple-system,sans-serif;
+  --mono:'SF Mono','Cascadia Code','Consolas',monospace;
+  --radius:16px;--transition:.3s ease;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.7;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;
+  background:radial-gradient(ellipse 1200px 600px at 75% -5%,rgba(157,107,255,.14),transparent),
+             radial-gradient(ellipse 1000px 500px at 10% 15%,rgba(41,223,255,.1),transparent)}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: var(--body);
-      color: var(--text);
-      background: radial-gradient(1200px 600px at 80% -10%, rgba(157, 107, 255, 0.16), transparent 55%),
-                  radial-gradient(1200px 700px at 0% 20%, rgba(41, 223, 255, 0.13), transparent 55%),
-                  var(--bg);
-      line-height: 1.7;
-      overflow-x: hidden;
-    }
+/* ── Floating shapes ── */
+.floater{position:fixed;border-radius:50%;pointer-events:none;z-index:-1;opacity:.06;filter:blur(2px);animation:floatY 20s ease-in-out infinite alternate}
+.floater:nth-child(2){animation-delay:-7s;animation-duration:25s}
+.floater:nth-child(3){animation-delay:-13s;animation-duration:18s}
+@keyframes floatY{0%{transform:translateY(0) scale(1)}50%{transform:translateY(-40px) scale(1.05)}100%{transform:translateY(20px) scale(.97)}}
 
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px);
-      background-size: 3px 3px;
-      opacity: 0.04;
-      z-index: -1;
-    }
+.wrap{width:min(1100px,92vw);margin:0 auto}
 
-    .container { width: min(1150px, 92vw); margin: 0 auto; }
-    .mono { font-family: var(--mono); }
+/* ── Top nav ── */
+.topnav{position:fixed;top:0;left:0;right:0;z-index:100;backdrop-filter:blur(14px);
+  background:rgba(6,7,18,.82);border-bottom:1px solid var(--border);transition:transform .3s}
+.topnav-inner{display:flex;align-items:center;gap:8px;padding:10px 0;overflow-x:auto}
+.topnav .logo{font-weight:700;font-size:14px;white-space:nowrap;margin-right:6px;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-link{font-size:11px;padding:5px 10px;border-radius:8px;color:var(--muted);text-decoration:none;
+  white-space:nowrap;transition:var(--transition);border:1px solid transparent;letter-spacing:.5px;text-transform:uppercase}
+.nav-link:hover,.nav-link.active{color:var(--cyan);border-color:rgba(41,223,255,.25);background:rgba(41,223,255,.06)}
+.progress-bar{position:fixed;top:0;left:0;height:3px;z-index:101;
+  background:linear-gradient(90deg,var(--cyan),var(--violet),var(--orange));width:0%;transition:width .15s}
 
-    .hero {
-      min-height: 88vh;
-      display: grid;
-      align-items: center;
-      padding: 90px 0 50px;
-      position: relative;
-    }
-    #hero-canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-      opacity: 0.45;
-    }
-    .eyebrow {
-      color: var(--cyan);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      font-size: 12px;
-      font-family: var(--mono);
-      margin-bottom: 16px;
-    }
-    h1 {
-      font-family: var(--display);
-      font-size: clamp(44px, 8vw, 94px);
-      line-height: 0.95;
-      letter-spacing: -2px;
-      margin-bottom: 18px;
-    }
-    h1 .grad {
-      background: linear-gradient(120deg, var(--cyan), var(--violet), var(--orange));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero-sub {
-      max-width: 620px;
-      color: #d5ddf8;
-      font-size: 18px;
-      margin-bottom: 26px;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .btn {
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.03);
-      color: var(--text);
-      padding: 11px 16px;
-      border-radius: 9px;
-      font-family: var(--mono);
-      font-size: 12px;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: 0.22s ease;
-      text-transform: uppercase;
-    }
-    .btn:hover { transform: translateY(-2px); border-color: var(--cyan); }
-    .btn-primary {
-      border-color: rgba(41, 223, 255, 0.5);
-      background: rgba(41, 223, 255, 0.12);
-      color: var(--cyan);
-    }
+/* ── Scroll top button ── */
+.scroll-top{position:fixed;bottom:28px;right:28px;z-index:90;width:44px;height:44px;border-radius:50%;
+  border:1px solid rgba(41,223,255,.3);background:var(--glass);backdrop-filter:blur(10px);
+  color:var(--cyan);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  opacity:0;transform:translateY(20px);transition:var(--transition);box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.scroll-top.show{opacity:1;transform:translateY(0)}
+.scroll-top:hover{background:rgba(41,223,255,.15);transform:translateY(-2px) !important}
 
-    .sticky-nav {
-      position: sticky;
-      top: 0;
-      z-index: 8;
-      backdrop-filter: blur(12px);
-      background: rgba(6, 7, 18, 0.8);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-    .steps {
-      display: flex;
-      gap: 8px;
-      padding: 12px 16px;
-      overflow-x: auto;
-      white-space: nowrap;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      width: 100%;
-    }
-    .steps::-webkit-scrollbar { display: none; }
-    .step {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 10px;
-      font-size: 11px;
-      color: var(--muted);
-      font-family: var(--mono);
-      text-align: center;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .step.active, .step:hover {
-      border-color: rgba(41, 223, 255, 0.45);
-      color: var(--cyan);
-      background: rgba(41, 223, 255, 0.08);
-    }
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:12px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:var(--transition);
+  border:1px solid var(--border);background:var(--card);color:var(--text);font-family:var(--font)}
+.btn:hover{transform:translateY(-2px);border-color:rgba(41,223,255,.4)}
+.btn-primary{border-color:rgba(41,223,255,.4);background:rgba(41,223,255,.1);color:var(--cyan)}
+.btn-primary:hover{background:rgba(41,223,255,.2);box-shadow:0 4px 20px rgba(41,223,255,.2)}
+.btn-accent{border-color:rgba(157,107,255,.4);background:rgba(157,107,255,.1);color:var(--violet)}
+.btn-warn{border-color:rgba(255,138,76,.4);background:rgba(255,138,76,.1);color:var(--orange)}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:10px}
+.btn.active-toggle{border-color:rgba(41,223,255,.6);background:rgba(41,223,255,.18);color:var(--cyan);
+  box-shadow:0 0 16px rgba(41,223,255,.15)}
 
-    main { padding: 32px 0 70px; }
-    .card {
-      border: 1px solid var(--border);
-      background: linear-gradient(145deg, rgba(20,27,56,0.82), rgba(10,13,29,0.88));
-      border-radius: 16px;
-      margin-bottom: 18px;
-      overflow: hidden;
-    }
-    .card-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-    }
-    .explain { padding: 36px; border-right: 1px solid var(--border); }
-    .vis { padding: 28px; display: grid; place-items: center; min-height: 340px; background: rgba(0,0,0,0.16); }
-    .card h2 { font-family: var(--display); font-size: 30px; margin: 8px 0 10px; }
-    .text { color: #d2dbfa; }
-    .formula {
-      display: inline-block;
-      margin-top: 14px;
-      padding: 7px 11px;
-      border-radius: 7px;
-      border: 1px solid rgba(255, 138, 76, 0.35);
-      color: var(--orange);
-      background: rgba(255, 138, 76, 0.08);
-      font-family: var(--mono);
-      font-size: 12px;
-    }
-    .deep-dive {
-      margin-top: 14px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 10px;
-      background: rgba(255, 255, 255, 0.03);
-      overflow: hidden;
-    }
-    .deep-dive summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 10px 12px;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--cyan);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border-bottom: 1px solid transparent;
-    }
-    .deep-dive[open] summary {
-      border-bottom-color: rgba(255, 255, 255, 0.1);
-      background: rgba(41, 223, 255, 0.06);
-    }
-    .deep-dive-body {
-      padding: 11px 12px 12px;
-      color: #d7dffa;
-      font-size: 14px;
-      line-height: 1.75;
-    }
-    .deep-dive-body p + p { margin-top: 8px; }
-    .panel {
-      width: min(360px, 100%);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      background: #03050d;
-    }
-    canvas { display: block; width: 100%; image-rendering: pixelated; }
+/* ── Section cards ── */
+.section{margin-bottom:24px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--card);overflow:hidden;backdrop-filter:blur(6px);
+  transform:translateY(30px);opacity:0;transition:transform .6s ease,opacity .6s ease}
+.section.visible{transform:translateY(0);opacity:1}
+.section-head{padding:24px 28px 18px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;
+  border-bottom:1px solid var(--border)}
+.section-icon{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:22px;flex-shrink:0;border:1px solid var(--border);background:rgba(255,255,255,.03)}
+.section-head h2{font-size:26px;font-weight:700;letter-spacing:-.5px;line-height:1.2}
+.section-head p{color:var(--muted);font-size:14px;max-width:680px;margin-top:4px}
+.section-body{padding:24px 28px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:10px;
+  letter-spacing:1px;text-transform:uppercase;font-weight:600;border:1px solid}
+.tag-interactive{color:var(--cyan);border-color:rgba(41,223,255,.3);background:rgba(41,223,255,.08)}
+.tag-visual{color:var(--violet);border-color:rgba(157,107,255,.3);background:rgba(157,107,255,.08)}
+.tag-training{color:var(--orange);border-color:rgba(255,138,76,.3);background:rgba(255,138,76,.08)}
+.tag-regularization{color:var(--green);border-color:rgba(53,214,154,.3);background:rgba(53,214,154,.08)}
 
-    .conv-wrap { position: relative; }
-    #scanner {
-      position: absolute;
-      border: 2px solid var(--orange);
-      width: 32px;
-      height: 32px;
-      pointer-events: none;
-      box-shadow: 0 0 18px rgba(255, 138, 76, 0.55);
-      background: rgba(255, 138, 76, 0.1);
-    }
-    .readout {
-      margin-top: 10px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.03);
-      border-radius: 8px;
-      padding: 9px 10px;
-      color: var(--cyan);
-      font-size: 11px;
-      font-family: var(--mono);
-      min-height: 70px;
-      width: min(360px, 100%);
-    }
+/* ── Grid layouts ── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.flex-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.flex-col{display:flex;flex-direction:column;gap:10px}
 
-    .row { display: flex; gap: 10px; align-items: center; }
-    .softmax { width: min(430px, 100%); }
-    .bar-row { display: grid; grid-template-columns: 90px 1fr 38px; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .bar-track { height: 11px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--cyan), #52f0b9); transition: width 0.5s ease; }
-    .winner { margin-top: 10px; color: var(--green); font-weight: 700; font-family: var(--mono); font-size: 13px; }
+/* ── Canvas & visuals ── */
+.vis-card{border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.2);padding:14px}
+.vis-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-weight:600}
+canvas{width:100%;height:auto;border-radius:10px;background:#000;image-rendering:pixelated}
 
-    .pool-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 4px;
-      width: min(240px, 92%);
-      margin-bottom: 12px;
-    }
-    .pool-cell {
-      aspect-ratio: 1 / 1;
-      border-radius: 6px;
-      display: grid;
-      place-items: center;
-      font-size: 10px;
-      font-family: var(--mono);
-      color: rgba(255,255,255,0.84);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
+/* ── Pipeline ── */
+.pipeline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;padding:20px 0}
+.pipe-node{padding:12px 18px;border-radius:12px;border:1px solid var(--border);background:var(--card);
+  cursor:pointer;transition:var(--transition);font-size:13px;font-weight:600;text-align:center;min-width:100px}
+.pipe-node:hover{border-color:rgba(41,223,255,.4);transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.pipe-arrow{color:var(--muted);font-size:20px;padding:0 4px;user-select:none}
 
-    .mini-map {
-      position: fixed;
-      right: 16px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 9;
-      border: 1px solid var(--border);
-      background: rgba(8, 11, 24, 0.85);
-      backdrop-filter: blur(8px);
-      border-radius: 10px;
-      padding: 10px 8px;
-      display: grid;
-      gap: 7px;
-    }
-    .mini-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.08);
-      cursor: pointer;
-      transition: 0.18s ease;
-    }
-    .mini-dot.active {
-      background: var(--cyan);
-      box-shadow: 0 0 10px rgba(41, 223, 255, 0.75);
-      border-color: rgba(41, 223, 255, 0.5);
-    }
+/* ── Kernel grid ── */
+.kernel-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.kcell{padding:10px;text-align:center;border-radius:10px;font-family:var(--mono);font-size:13px;
+  border:1px solid var(--border);background:rgba(0,0,0,.2);transition:var(--transition)}
+.kcell.pos{border-color:rgba(53,214,154,.35);color:var(--green);background:rgba(53,214,154,.08)}
+.kcell.neg{border-color:rgba(255,138,76,.35);color:var(--orange);background:rgba(255,138,76,.08)}
 
-    .flatten-wrap { width: min(460px, 100%); display: grid; place-items: center; gap: 12px; }
-    .flat-stage { width: 100%; display: flex; align-items: center; justify-content: center; gap: 24px; }
-    .cube-wrap { perspective: 420px; }
-    .cube3d {
-      width: 92px;
-      height: 92px;
-      transform-style: preserve-3d;
-      animation: cubeRotate 8s linear infinite;
-    }
-    @keyframes cubeRotate {
-      from { transform: rotateX(-22deg) rotateY(0deg); }
-      to { transform: rotateX(-22deg) rotateY(360deg); }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .cube3d { animation: none; transform: rotateX(-22deg) rotateY(35deg); }
-      .flat-bar, .reveal { transition: none !important; animation: none !important; transform: none !important; opacity: 1 !important; }
-    }
-    .face {
-      position: absolute;
-      width: 92px;
-      height: 92px;
-      border: 1px solid rgba(157, 107, 255, 0.35);
-      background: rgba(157, 107, 255, 0.09);
-      display: grid;
-      place-items: center;
-      font-family: var(--mono);
-      font-size: 10px;
-      color: #d8c8ff;
-    }
-    .face.f1 { transform: translateZ(46px); }
-    .face.f2 { transform: rotateY(180deg) translateZ(46px); }
-    .face.f3 { transform: rotateY(90deg) translateZ(46px); }
-    .face.f4 { transform: rotateY(-90deg) translateZ(46px); }
-    .face.f5 { transform: rotateX(90deg) translateZ(46px); }
-    .face.f6 { transform: rotateX(-90deg) translateZ(46px); }
-    .flat-arrow { font-size: 22px; color: var(--muted); }
-    .flat-bars { display: flex; gap: 3px; align-items: end; height: 140px; width: min(250px, 100%); }
-    .flat-bar { width: 6px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, var(--violet), var(--cyan)); opacity: 0.75; }
+/* ── Bars (softmax) ── */
+.bar-row{display:grid;grid-template-columns:100px 1fr 50px;gap:10px;align-items:center;margin-bottom:8px}
+.bar-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.bar-track{height:14px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid rgba(255,255,255,.05)}
+.bar-fill{height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .6s ease}
+.bar-pct{font-family:var(--mono);font-size:12px;color:var(--cyan);text-align:right}
 
-    .dense-wrap { width: min(430px, 100%); }
-    .dense-svg {
-      width: 100%;
-      height: 230px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.22);
-    }
-    .dline { stroke: rgba(157, 107, 255, 0.16); stroke-width: 1; }
-    .dcircle { fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.2); stroke-width: 1; }
-    .dcircle.live { fill: rgba(41,223,255,0.9); filter: drop-shadow(0 0 4px rgba(41,223,255,0.8)); stroke: rgba(41,223,255,0.95); }
+/* ── Training pipeline ── */
+.train-pipeline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin:20px 0}
+.train-node{padding:14px 20px;border-radius:14px;border:2px solid var(--border);background:var(--card);
+  cursor:pointer;transition:var(--transition);text-align:center;min-width:110px}
+.train-node.active-node{border-color:var(--cyan);background:rgba(41,223,255,.1);box-shadow:0 0 20px rgba(41,223,255,.15)}
+.train-node .tn-icon{font-size:24px;margin-bottom:4px}
+.train-node .tn-label{font-size:12px;font-weight:600;letter-spacing:.5px}
+.train-arrow{color:var(--muted);font-size:22px;padding:0 6px}
 
-    .legend {
-      width: min(450px, 100%);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      background: rgba(255,255,255,0.03);
-      margin-top: 12px;
-    }
-    .legend-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      font-size: 12px;
-      color: var(--muted);
-      font-family: var(--mono);
-    }
-    .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 7px; }
+/* ── Chart ── */
+.chart-container{position:relative;border:1px solid var(--border);border-radius:14px;background:rgba(0,0,0,.25);padding:16px;margin-top:16px}
+.chart-container canvas{background:transparent !important;image-rendering:auto}
 
-    .reveal { opacity: 0; transform: translateY(18px) scale(0.99); transition: 0.55s ease; }
-    .reveal.in { opacity: 1; transform: translateY(0) scale(1); }
+/* ── Bias Variance ── */
+.bv-controls{display:flex;gap:8px;margin-bottom:20px}
+.bv-btn{flex:1;padding:14px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;
+  border:2px solid var(--border);background:var(--card);color:var(--text);transition:var(--transition);text-align:center}
+.bv-btn.sel{border-color:var(--cyan);background:rgba(41,223,255,.12);color:var(--cyan);box-shadow:0 0 16px rgba(41,223,255,.12)}
+.bv-card{border:1px solid var(--border);border-radius:14px;padding:20px;background:rgba(255,255,255,.02);margin-top:16px}
+.diagnosis{display:inline-block;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;letter-spacing:.5px}
 
-    .after-softmax { margin-top: 6px; }
-    .metric-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
-      gap: 10px;
-      margin-top: 14px;
-    }
-    .metric {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px;
-      background: rgba(255,255,255,0.03);
-    }
-    .metric .num { font-family: var(--display); font-size: 28px; color: var(--cyan); line-height: 1; margin-bottom: 4px; }
-    .metric .lbl { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-    .params-bars { margin-top: 16px; display: grid; gap: 10px; }
-    .p-row { display: grid; grid-template-columns: 130px 1fr 78px; gap: 10px; align-items: center; }
-    .p-track { height: 9px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
-    .p-fill { height: 100%; border-radius: 999px; width: 0; transition: width 0.9s ease; }
+/* ── Dropout ── */
+.neuron-grid{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:20px 0}
+.neuron{width:44px;height:44px;border-radius:50%;border:2px solid rgba(41,223,255,.4);
+  background:rgba(41,223,255,.15);transition:var(--transition);display:flex;align-items:center;justify-content:center;font-size:14px}
+.neuron.dropped{border-color:rgba(255,92,108,.3);background:rgba(255,92,108,.08);opacity:.35;transform:scale(.85)}
+.neuron.active-n{border-color:rgba(53,214,154,.5);background:rgba(53,214,154,.2);box-shadow:0 0 12px rgba(53,214,154,.2)}
+.dropout-slider{width:100%;-webkit-appearance:none;height:8px;border-radius:4px;background:rgba(255,255,255,.1);outline:none;margin:10px 0}
+.dropout-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--cyan);cursor:pointer;border:2px solid rgba(255,255,255,.3)}
 
-    .quiz-wrap { margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; background: rgba(255,255,255,0.03); padding: 14px; }
-    .quiz-q { font-size: 16px; color: #e7ecff; margin-bottom: 12px; }
-    .quiz-opts { display: grid; gap: 9px; }
-    .quiz-opt {
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 10px 12px;
-      background: rgba(255,255,255,0.02);
-      color: var(--text);
-      text-align: left;
-      font-family: var(--body);
-      cursor: pointer;
-    }
-    .quiz-opt:hover { border-color: rgba(41,223,255,0.45); }
-    .quiz-opt.good { border-color: rgba(53,214,154,0.6); background: rgba(53,214,154,0.15); }
-    .quiz-opt.bad { border-color: rgba(255,138,76,0.6); background: rgba(255,138,76,0.14); }
-    .quiz-foot { margin-top: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .quiz-fb { font-size: 13px; color: var(--muted); }
+/* ── Stats ── */
+.stat-card{border:1px solid var(--border);border-radius:14px;padding:20px;background:var(--card);text-align:center}
+.stat-value{font-size:32px;font-weight:700;font-family:var(--mono);margin-bottom:4px}
+.stat-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
 
-    .faq-grid { margin-top: 14px; display: grid; gap: 10px; }
-    .faq-item {
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      background: rgba(255,255,255,0.02);
-    }
-    .faq-q {
-      width: 100%;
-      border: none;
-      background: transparent;
-      color: var(--text);
-      text-align: left;
-      padding: 12px 13px;
-      font-family: var(--body);
-      cursor: pointer;
-    }
-    .faq-a {
-      max-height: 0;
-      overflow: hidden;
-      transition: max-height 0.35s ease;
-      padding: 0 13px;
-      color: #d4ddfb;
-      font-size: 14px;
-    }
-    .faq-item.open .faq-a { max-height: 220px; padding: 0 13px 12px; }
+/* ── Quiz ── */
+.quiz-q{font-size:18px;font-weight:600;margin-bottom:16px;line-height:1.4}
+.quiz-opts{display:grid;gap:10px}
+.quiz-opt{padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(0,0,0,.15);
+  cursor:pointer;transition:var(--transition);text-align:left;font-size:14px;color:var(--text);font-family:var(--font)}
+.quiz-opt:hover{border-color:rgba(41,223,255,.4);transform:translateY(-2px)}
+.quiz-opt.correct{border-color:var(--green);background:rgba(53,214,154,.15)}
+.quiz-opt.wrong{border-color:var(--red);background:rgba(255,92,108,.12)}
+.quiz-opt.disabled{pointer-events:none;opacity:.7}
+.quiz-progress{font-size:13px;color:var(--muted);margin-top:14px}
 
-    @media (max-width: 900px) {
-      .steps { grid-template-columns: 1fr; }
-      .card-grid { grid-template-columns: 1fr; }
-      .explain { border-right: none; border-bottom: 1px solid var(--border); }
-      .mini-map { display: none; }
-      .metric-grid { grid-template-columns: 1fr 1fr; }
-      .p-row { grid-template-columns: 92px 1fr 62px; }
-    }
-  </style>
+/* ── FAQ ── */
+.faq-item{border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;background:var(--card)}
+.faq-q{padding:16px 20px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  font-weight:600;font-size:15px;transition:var(--transition)}
+.faq-q:hover{background:rgba(255,255,255,.03)}
+.faq-q::after{content:'▸';transition:transform .3s;font-size:14px;color:var(--muted)}
+.faq-item.open .faq-q::after{transform:rotate(90deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s;padding:0 20px}
+.faq-item.open .faq-a{max-height:400px;padding:0 20px 18px}
+.faq-a p{color:var(--muted);font-size:14px;line-height:1.7}
+
+/* ── Footer ── */
+footer{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px;border-top:1px solid var(--border);margin-top:40px}
+footer .ftitle{font-size:18px;font-weight:700;margin-bottom:6px;
+  background:linear-gradient(135deg,var(--cyan),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+/* ── Hero ── */
+.hero{padding:90px 0 40px;text-align:center}
+.hero h1{font-size:clamp(36px,7vw,72px);font-weight:700;letter-spacing:-2px;line-height:1;margin-bottom:16px}
+.hero .grad{background:linear-gradient(135deg,var(--cyan),var(--violet),var(--orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--muted);font-size:17px;max-width:640px;margin:0 auto 24px}
+.hero-anim{margin:30px auto 0;width:200px;height:80px;position:relative}
+.hero-anim .dot{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--cyan);opacity:.5;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.6);opacity:.8}}
+
+/* ── Compare table ── */
+.compare-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:16px;font-size:13px}
+.compare-table th{padding:10px 14px;background:rgba(41,223,255,.08);color:var(--cyan);text-align:left;font-weight:600;
+  letter-spacing:.5px;text-transform:uppercase;font-size:11px}
+.compare-table th:first-child{border-radius:12px 0 0 0}
+.compare-table th:last-child{border-radius:0 12px 0 0}
+.compare-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--muted)}
+.compare-table tr:last-child td:first-child{border-radius:0 0 0 12px}
+.compare-table tr:last-child td:last-child{border-radius:0 0 12px 0}
+
+/* ── Responsive ── */
+@media(max-width:768px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .pipeline,.train-pipeline{flex-direction:column}
+  .pipe-arrow,.train-arrow{transform:rotate(90deg)}
+  .bar-row{grid-template-columns:70px 1fr 40px}
+  .section-body{padding:16px}
+  .section-head{padding:18px 16px 14px}
+  .topnav-inner{gap:4px}
+  .nav-link{font-size:10px;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
 </head>
 <body>
-  <section class="hero">
-    <canvas id="hero-canvas"></canvas>
-    <div class="container">
-      <div class="eyebrow">Interactive Deep Learning Experience</div>
-      <h1>Build Intuition for <span class="grad">CNN Vision</span></h1>
-      <p class="hero-sub">A live layer-by-layer CNN walkthrough: upload your own image, inspect convolution math in real time, and watch probability outputs update.</p>
-      <div class="hero-actions">
-        <label class="btn btn-primary">Upload Image <input id="upload" type="file" accept="image/*" hidden></label>
-        <button class="btn" id="btn-preset-stripes">Stripes</button>
-        <button class="btn" id="btn-preset-circle">Circle</button>
-        <button class="btn" id="mode-btn">ELI5 Mode</button>
-        <button class="btn" onclick="document.getElementById('sec-0').scrollIntoView({behavior:'smooth'})">Start Exploring</button>
+
+<!-- Floating shapes -->
+<div class="floater" style="width:300px;height:300px;background:var(--violet);top:10%;left:-5%"></div>
+<div class="floater" style="width:250px;height:250px;background:var(--cyan);top:40%;right:-8%"></div>
+<div class="floater" style="width:200px;height:200px;background:var(--orange);top:70%;left:10%"></div>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Top nav -->
+<nav class="topnav" id="topnav">
+  <div class="wrap topnav-inner">
+    <span class="logo">CNN Guide</span>
+    <a href="#hero" class="nav-link">Home</a>
+    <a href="#pipeline" class="nav-link">Pipeline</a>
+    <a href="#input" class="nav-link">Input</a>
+    <a href="#conv" class="nav-link">Conv</a>
+    <a href="#pool" class="nav-link">Pool</a>
+    <a href="#flatten" class="nav-link">Flatten</a>
+    <a href="#dense" class="nav-link">Dense</a>
+    <a href="#softmax" class="nav-link">Output</a>
+    <a href="#training" class="nav-link">Training</a>
+    <a href="#biasvar" class="nav-link">Bias/Var</a>
+    <a href="#dropout" class="nav-link">Dropout</a>
+    <a href="#stats" class="nav-link">Stats</a>
+    <a href="#quiz" class="nav-link">Quiz</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+  </div>
+</nav>
+
+<!-- Back to top -->
+<button class="scroll-top" id="scrollTopBtn" title="Back to top" aria-label="Scroll to top">↑</button>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section class="hero" id="hero">
+  <div class="wrap">
+    <div class="flex-row" style="justify-content:center;margin-bottom:14px">
+      <span class="tag tag-interactive">✦ Interactive</span>
+      <span class="tag tag-visual">✦ Visual</span>
+      <span class="tag tag-training">✦ Training</span>
+      <span class="tag tag-regularization">✦ Regularization</span>
+    </div>
+    <h1><span class="grad">CNN Ultimate Guide</span></h1>
+    <p>An interactive visual guide to convolutional neural networks, training loops, generalization, and regularization. Learn by exploring — no math prerequisites needed.</p>
+    <div class="flex-row" style="justify-content:center">
+      <button class="btn btn-primary" onclick="document.getElementById('pipeline').scrollIntoView({behavior:'smooth'})">Start Exploring</button>
+      <button class="btn btn-accent" onclick="document.getElementById('training').scrollIntoView({behavior:'smooth'})">Jump to Training</button>
+    </div>
+    <div class="hero-anim" aria-hidden="true">
+      <div class="dot" style="left:20px;top:20px"></div>
+      <div class="dot" style="left:60px;top:40px;animation-delay:.3s;background:var(--violet)"></div>
+      <div class="dot" style="left:100px;top:15px;animation-delay:.6s"></div>
+      <div class="dot" style="left:140px;top:45px;animation-delay:.9s;background:var(--orange)"></div>
+      <div class="dot" style="left:175px;top:25px;animation-delay:1.2s;background:var(--violet)"></div>
+    </div>
+  </div>
+</section>
+
+<div class="wrap">
+
+<!-- ═══════════ PIPELINE OVERVIEW ═══════════ -->
+<section class="section" id="pipeline">
+  <div class="section-head">
+    <div class="section-icon">🔗</div>
+    <div><h2>CNN Pipeline Overview</h2><p>Click any stage to jump directly to its detailed section.</p></div>
+  </div>
+  <div class="section-body">
+    <div class="pipeline" id="pipelineVis">
+      <div class="pipe-node" onclick="document.getElementById('input').scrollIntoView({behavior:'smooth'})">🖼 Input</div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-node" onclick="document.getElementById('conv').scrollIntoView({behavior:'smooth'})">🔎 Convolution</div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-node" onclick="document.getElementById('pool').scrollIntoView({behavior:'smooth'})">📉 Pooling</div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-node" onclick="document.getElementById('flatten').scrollIntoView({behavior:'smooth'})">📏 Flatten</div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-node" onclick="document.getElementById('dense').scrollIntoView({behavior:'smooth'})">🧠 Dense</div>
+      <span class="pipe-arrow">→</span>
+      <div class="pipe-node" onclick="document.getElementById('softmax').scrollIntoView({behavior:'smooth'})">📊 Softmax</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ INPUT ═══════════ -->
+<section class="section" id="input">
+  <div class="section-head">
+    <div class="section-icon">🖼</div>
+    <div><h2>Input Image</h2><p>Images are converted to a 28×28 grayscale grid. Each pixel becomes a number between 0 and 1.</p></div>
+    <span class="tag tag-interactive">Interactive</span>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="vis-card">
+        <div class="vis-label">Pixel Grid (28×28)</div>
+        <canvas id="inputCanvas" width="280" height="280"></canvas>
+      </div>
+      <div class="flex-col">
+        <p style="color:var(--muted);font-size:14px">Select a sample pattern to visualize how images are represented as numerical grids:</p>
+        <div class="flex-row">
+          <button class="btn btn-sm active-toggle" data-sample="shoe" onclick="setSample(this)">👟 Shoe</button>
+          <button class="btn btn-sm" data-sample="bag" onclick="setSample(this)">👜 Bag</button>
+          <button class="btn btn-sm" data-sample="shirt" onclick="setSample(this)">👕 Shirt</button>
+        </div>
+        <div class="vis-card" style="margin-top:10px">
+          <div class="vis-label">How it works</div>
+          <p style="color:var(--muted);font-size:13px;line-height:1.6">
+            Each cell in the grid represents one pixel. Brighter cells mean higher activation values. 
+            The CNN receives this grid as its input tensor with shape <strong style="color:var(--cyan)">[1, 28, 28, 1]</strong>.
+          </p>
+        </div>
       </div>
     </div>
-  </section>
-
-  <div class="sticky-nav">
-    <div class="container steps" id="steps"></div>
   </div>
+</section>
 
-  <div class="mini-map" id="mini-map"></div>
-
-  <main class="container">
-    <section class="card reveal" id="sec-0">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 1</div>
-          <h2 data-eli5="Picture becomes numbers">Input Tensor</h2>
-          <p class="text" data-eli5="The CNN sees your image as a 28 by 28 table of brightness values, not as a photo.">
-            We normalize the uploaded image into a 28 x 28 grayscale tensor. Every value is scaled to 0 to 1 so optimization stays numerically stable.
-          </p>
-          <div class="formula">Input shape: [28, 28, 1]</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Normalization just means shrinking big pixel numbers (0 to 255) into small ones (0 to 1), so training is smoother.">
-                Think of this as setting everyone to the same scale before the race starts. Pixels originally range from 0 to 255; we divide by 255 so values become 0 to 1. This helps the model learn faster and with fewer unstable jumps.
-              </p>
-              <p data-eli5="The image is only one color channel here, so each pixel has one brightness value, not three RGB values.">
-                Here each pixel has one number (brightness), because this dataset is grayscale. So the input is [28, 28, 1]. If it were RGB, it would be [28, 28, 3], and each filter would need three times more values to read.
-              </p>
-            </div>
-          </details>
+<!-- ═══════════ CONVOLUTION ═══════════ -->
+<section class="section" id="conv">
+  <div class="section-head">
+    <div class="section-icon">🔎</div>
+    <div><h2>Convolution</h2><p>Filters learn useful local patterns such as edges, textures, and shapes. A small kernel slides across the image computing dot products.</p></div>
+    <span class="tag tag-visual">Visual</span>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="flex-col">
+        <div class="vis-card">
+          <div class="vis-label">Feature Map Output</div>
+          <canvas id="convCanvas" width="260" height="260"></canvas>
         </div>
-        <div class="vis">
-          <div class="panel">
-            <canvas id="input" width="280" height="280"></canvas>
+        <div class="flex-row">
+          <button class="btn btn-sm btn-primary" id="convAnimBtn" onclick="toggleConvAnim()">▶ Animate Scan</button>
+        </div>
+      </div>
+      <div class="flex-col">
+        <div class="vis-label">Active Kernel (3×3)</div>
+        <div class="kernel-grid" id="kernelGrid"></div>
+        <div class="flex-row" style="margin-top:12px">
+          <button class="btn btn-sm active-toggle" data-kname="edge" onclick="setKernel(this)">Edge</button>
+          <button class="btn btn-sm" data-kname="blur" onclick="setKernel(this)">Blur</button>
+          <button class="btn btn-sm" data-kname="sharpen" onclick="setKernel(this)">Sharpen</button>
+        </div>
+        <div class="vis-card" style="margin-top:14px">
+          <div class="vis-label">Dot Product Readout</div>
+          <div id="dotReadout" style="font-family:var(--mono);font-size:12px;color:var(--cyan);min-height:60px">
+            Click "Animate Scan" to watch the kernel slide across the image.
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="card reveal" id="sec-1">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 2</div>
-          <h2 data-eli5="Pattern scanner">Convolution + ReLU</h2>
-          <p class="text" data-eli5="A tiny 3x3 scanner moves across the image. It gives high scores when it sees the edge pattern it likes.">
-            A 3x3 kernel slides over every valid location and computes a dot product (sum of weight x pixel). ReLU then applies max(0, x) to keep useful activations and suppress negatives.
-            <br><br><em style="font-size:14px;color:var(--cyan)">Note: Real CNNs stack multiple Conv+ReLU blocks (e.g., Conv2D Layer 2 in our stats) to learn increasingly complex feature combinations.</em>
-          </p>
-          <div class="formula">Output: 26 x 26 after valid convolution</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Each filter is like a tiny detector. One may fire on vertical edges, another on curves or corners.">
-                A filter is a tiny 3x3 detector sliding across the image. At every position it asks: "How much does this patch look like what I detect?" Early filters usually learn simple patterns like edges or corners.
-              </p>
-              <p data-eli5="ReLU turns negatives into zero, so weak or wrong matches are muted and strong matches stand out.">
-                ReLU keeps useful signals and drops weak/negative ones: max(0, x). This makes the map cleaner and more focused. Without this non-linearity, stacking many layers would be much less powerful.
-              </p>
-            </div>
-          </details>
+<!-- ═══════════ POOLING ═══════════ -->
+<section class="section" id="pool">
+  <div class="section-head">
+    <div class="section-icon">📉</div>
+    <div><h2>Max Pooling</h2><p>Pooling reduces spatial size while keeping the strongest signals. A 2×2 window takes the maximum value.</p></div>
+    <span class="tag tag-interactive">Interactive</span>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="vis-card">
+        <div class="vis-label">Pooling Visualization</div>
+        <canvas id="poolCanvas" width="260" height="260"></canvas>
+      </div>
+      <div class="flex-col">
+        <button class="btn btn-primary" onclick="animatePooling()">▶ Step Through Pooling</button>
+        <div class="vis-card">
+          <div class="vis-label">How Max Pooling Works</div>
+          <p style="color:var(--muted);font-size:13px">A 2×2 window slides across the feature map. From each window, only the maximum value survives. This halves the spatial dimensions — from 26×26 to 13×13 — reducing computation and making features more position-invariant.</p>
         </div>
-        <div class="vis">
-          <div style="display:flex; gap: 16px; margin-bottom: 16px; align-items:center;">
-            <div id="kernel-editor" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; background:rgba(0,0,0,0.3); padding:8px; border-radius:8px; border:1px solid var(--border);"></div>
-            <div style="font-size:11px; color:var(--muted); max-width: 140px; line-height:1.4;">
-               Click cells to edit the kernel weights & watch the feature map change live.
-            </div>
-          </div>
-          <div class="conv-wrap panel" id="conv-wrap">
-            <canvas id="conv" width="280" height="280"></canvas>
-            <div id="scanner"></div>
-          </div>
-          <div class="readout" id="readout"></div>
+        <div id="poolReadout" style="font-family:var(--mono);font-size:12px;color:var(--cyan)">Press the button to step through the pooling process.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ FLATTEN ═══════════ -->
+<section class="section" id="flatten">
+  <div class="section-head">
+    <div class="section-icon">📏</div>
+    <div><h2>Flatten</h2><p>The 2D feature map is unrolled into a 1D vector, preparing features for the fully connected layers.</p></div>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="vis-card">
+        <div class="vis-label">2D → 1D Transformation</div>
+        <svg id="flattenSvg" viewBox="0 0 400 240" style="width:100%;background:rgba(0,0,0,.2);border-radius:14px"></svg>
+      </div>
+      <div class="flex-col">
+        <button class="btn btn-primary" onclick="animateFlatten()">▶ Animate Flatten</button>
+        <div class="vis-card">
+          <div class="vis-label">Why Flatten?</div>
+          <p style="color:var(--muted);font-size:13px">Dense layers expect a 1D input. Flattening rearranges the grid values row by row into a single long vector. For a 13×13 map, this produces a vector of length 169.</p>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="card reveal" id="sec-2">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 3</div>
-          <h2 data-eli5="Keep the strongest">Max Pooling</h2>
-          <p class="text" data-eli5="From each 2x2 patch, we only keep the biggest value so the network focuses on strong clues.">
-            Pooling downsamples activations by taking the largest value in each 2x2 window. This compresses spatial resolution while preserving prominent responses.
-          </p>
-          <div class="formula">26 x 26 -> 13 x 13</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Pooling makes the model less sensitive to tiny position shifts. If a feature moves a little, it can still be kept.">
-                Max pooling looks at a 2x2 block and keeps only the strongest value. So even if an edge shifts by 1 pixel, the key signal often survives. That makes the model more robust to small movement.
-              </p>
-              <p data-eli5="It also cuts data size a lot, so later layers can focus on meaning instead of raw location detail.">
-                It also shrinks data a lot (26x26 -> 13x13), so later layers have less noise and less compute, while still keeping the important clues.
-              </p>
-            </div>
-          </details>
-        </div>
-        <div class="vis">
-          <div class="pool-grid" id="pool-grid"></div>
-          <div class="mono" style="color:var(--muted);font-size:11px">Animated 2 x 2 max-window highlighting</div>
+<!-- ═══════════ DENSE ═══════════ -->
+<section class="section" id="dense">
+  <div class="section-head">
+    <div class="section-icon">🧠</div>
+    <div><h2>Dense Layers</h2><p>Fully connected neurons combine all extracted features to make classification decisions.</p></div>
+    <span class="tag tag-visual">Visual</span>
+  </div>
+  <div class="section-body">
+    <div class="grid-2">
+      <div class="vis-card">
+        <div class="vis-label">Neural Network Forward Pass</div>
+        <canvas id="denseCanvas" width="400" height="260"></canvas>
+      </div>
+      <div class="flex-col">
+        <button class="btn btn-primary" onclick="animateDense()">▶ Animate Activations</button>
+        <div class="vis-card">
+          <div class="vis-label">How Dense Layers Work</div>
+          <p style="color:var(--muted);font-size:13px">Each neuron receives inputs from ALL neurons in the previous layer, applies learned weights, adds a bias, and passes through an activation function (ReLU). The final dense layer maps to output classes.</p>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="card reveal" id="sec-3">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 4</div>
-          <h2 data-eli5="Flatten into one list">Flatten</h2>
-          <p class="text" data-eli5="After pooling, we line up all feature values into one long row so dense neurons can read them.">
-            Flatten reshapes the pooled feature map into a one-dimensional feature vector. No parameters are learned; it is purely a geometric transform.
-          </p>
-          <div class="formula">13 x 13 -> 169 values</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Flatten is not a brain step; it is just rearranging values from a grid into a line.">
-                Flatten does not learn anything. It simply unwraps the feature grid into one long list so dense neurons can read it.
-              </p>
-              <p data-eli5="After flattening, each number can connect to many neurons that combine clues to recognize classes.">
-                So this is a bridge step: convolution finds local patterns, flatten prepares them in vector form for global decision making.
-              </p>
-            </div>
-          </details>
+<!-- ═══════════ SOFTMAX ═══════════ -->
+<section class="section" id="softmax">
+  <div class="section-head">
+    <div class="section-icon">📊</div>
+    <div><h2>Softmax / Output</h2><p>Raw scores are converted into class probabilities. The highest probability is the model's prediction.</p></div>
+    <span class="tag tag-interactive">Interactive</span>
+  </div>
+  <div class="section-body">
+    <div id="softmaxBars"></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" onclick="animateSoftmax()">🎯 Predict</button>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin-top:12px">The forward pass is now complete. Softmax converts logits into probabilities that sum to 1. The class with the highest probability becomes the model's prediction.</p>
+  </div>
+</section>
+
+<!-- ═══════════ TRAINING ═══════════ -->
+<section class="section" id="training">
+  <div class="section-head">
+    <div class="section-icon">🏋️</div>
+    <div><h2>Training Loop</h2><p>How the CNN learns: forward pass → loss → backpropagation → weight update → repeat over many epochs.</p></div>
+    <span class="tag tag-training">Training</span>
+  </div>
+  <div class="section-body">
+    <div class="train-pipeline" id="trainPipeline">
+      <div class="train-node active-node" data-step="0" onclick="setTrainStep(0)">
+        <div class="tn-icon">➡️</div><div class="tn-label">Forward Pass</div>
+      </div>
+      <span class="train-arrow">→</span>
+      <div class="train-node" data-step="1" onclick="setTrainStep(1)">
+        <div class="tn-icon">📏</div><div class="tn-label">Loss</div>
+      </div>
+      <span class="train-arrow">→</span>
+      <div class="train-node" data-step="2" onclick="setTrainStep(2)">
+        <div class="tn-icon">🔙</div><div class="tn-label">Backprop</div>
+      </div>
+      <span class="train-arrow">→</span>
+      <div class="train-node" data-step="3" onclick="setTrainStep(3)">
+        <div class="tn-icon">⚙️</div><div class="tn-label">Update Weights</div>
+      </div>
+      <span class="train-arrow">→</span>
+      <div class="train-node" data-step="4" onclick="setTrainStep(4)">
+        <div class="tn-icon">🔄</div><div class="tn-label">Repeat</div>
+      </div>
+    </div>
+    <div class="vis-card" id="trainDesc" style="min-height:80px">
+      <div class="vis-label">Forward Pass</div>
+      <p style="color:var(--muted);font-size:14px">Input data flows through the network layer by layer, producing a prediction. Each layer transforms the data using its current weights and biases.</p>
+    </div>
+
+    <!-- Weight animation -->
+    <div class="grid-2" style="margin-top:20px">
+      <div class="vis-card">
+        <div class="vis-label">Weight Update Animation</div>
+        <div style="display:flex;align-items:center;gap:16px;margin:16px 0">
+          <div style="font-family:var(--mono);font-size:14px;color:var(--muted)">w =</div>
+          <div id="weightVal" style="font-family:var(--mono);font-size:28px;font-weight:700;color:var(--cyan);transition:.4s">0.4200</div>
+          <button class="btn btn-sm btn-primary" onclick="animateWeight()">Update Weight</button>
         </div>
-        <div class="vis">
-          <div class="flatten-wrap">
-            <div class="mono" style="font-size:11px;color:var(--muted)">COMPRESSED FEATURE VECTOR</div>
-            <div class="flat-stage">
-              <div class="cube-wrap">
-                <div class="cube3d">
-                  <div class="face f1">13x13</div>
-                  <div class="face f2">13x13</div>
-                  <div class="face f3">maps</div>
-                  <div class="face f4">maps</div>
-                  <div class="face f5">pool</div>
-                  <div class="face f6">feat</div>
-                </div>
-              </div>
-              <svg class="flat-arrow" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--cyan); opacity:0.7;"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-              <div class="flat-bars" id="flat-bars"></div>
-            </div>
-            <div class="mono" style="font-size:10px;color:var(--muted)">3D FEATURES -> 1D VECTOR</div>
+        <p style="color:var(--muted);font-size:12px">Each weight is adjusted by subtracting the learning rate × gradient. Watch the value change with each update.</p>
+      </div>
+      <div class="vis-card">
+        <div class="vis-label">Epoch Progress</div>
+        <div id="epochBars" style="margin:12px 0"></div>
+        <button class="btn btn-sm btn-primary" onclick="runEpochs()">Run 5 Epochs</button>
+      </div>
+    </div>
+
+    <!-- Loss / accuracy chart -->
+    <div class="chart-container">
+      <div class="vis-label">Training Curves</div>
+      <div class="flex-row" style="margin-bottom:10px">
+        <button class="btn btn-sm active-toggle" id="chartToggle" onclick="toggleMetrics()">Show Validation Curves</button>
+      </div>
+      <canvas id="lossChart" width="800" height="300" style="width:100%;height:auto"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ BIAS VS VARIANCE ═══════════ -->
+<section class="section" id="biasvar">
+  <div class="section-head">
+    <div class="section-icon">⚖️</div>
+    <div><h2>Bias vs Variance</h2><p>Understanding underfitting, overfitting, and the sweet spot of good generalization.</p></div>
+    <span class="tag tag-training">Training</span>
+  </div>
+  <div class="section-body">
+    <div class="bv-controls">
+      <button class="bv-btn sel" onclick="setBV('under')">📉 Underfitting</button>
+      <button class="bv-btn" onclick="setBV('good')">✅ Good Fit</button>
+      <button class="bv-btn" onclick="setBV('over')">📈 Overfitting</button>
+    </div>
+    <div class="grid-2">
+      <div class="chart-container">
+        <div class="vis-label">Train vs Validation Curves</div>
+        <canvas id="bvChart" width="500" height="280" style="width:100%;height:auto"></canvas>
+      </div>
+      <div>
+        <div class="bv-card" id="bvExplain">
+          <div id="bvDiagnosis" class="diagnosis" style="background:rgba(255,138,76,.15);color:var(--orange);margin-bottom:12px">High Bias</div>
+          <p id="bvText" style="color:var(--muted);font-size:14px;line-height:1.7">The model is too simple to capture the underlying patterns. Both training and validation performance are poor. The model "underfits" — it has not learned enough from the data.</p>
+        </div>
+      </div>
+    </div>
+    <!-- Dartboard Analogy -->
+    <div style="margin-top:28px">
+      <div class="vis-label" style="text-align:center;font-size:13px;margin-bottom:6px">🎯 The Dartboard Analogy</div>
+      <p style="color:var(--muted);font-size:13px;text-align:center;margin-bottom:20px;max-width:600px;margin-left:auto;margin-right:auto">
+        Imagine each prediction is a dart throw. The bullseye is the true answer. <strong style="color:var(--text)">Bias</strong> = how far the average throw is from center. <strong style="color:var(--text)">Variance</strong> = how spread out the throws are.
+      </p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px" id="dartboards">
+        <!-- JS renders 4 dartboards -->
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ DROPOUT ═══════════ -->
+<section class="section" id="dropout">
+  <div class="section-head">
+    <div class="section-icon">🎲</div>
+    <div><h2>Dropout</h2><p>A powerful regularization technique that randomly disables neurons during training to reduce overfitting.</p></div>
+    <span class="tag tag-regularization">Regularization</span>
+  </div>
+  <div class="section-body">
+    <div class="flex-row" style="margin-bottom:16px;gap:10px">
+      <button class="btn btn-primary active-toggle" id="dropTrainBtn" onclick="setDropMode('train')">🏋️ Training Mode</button>
+      <button class="btn" id="dropInferBtn" onclick="setDropMode('infer')">🔮 Inference Mode</button>
+    </div>
+    <div class="grid-2">
+      <div>
+        <div class="vis-card">
+          <div class="vis-label" id="dropModeLabel">Training Mode — Some neurons disabled</div>
+          <div class="neuron-grid" id="neuronGrid"></div>
+          <button class="btn btn-sm btn-warn" id="reRandomBtn" onclick="reRandomize()" style="margin-top:12px">🎲 Re-randomize</button>
+        </div>
+        <div style="margin-top:14px">
+          <div class="vis-label">Dropout Rate: <span id="dropRateLabel">30%</span></div>
+          <input type="range" class="dropout-slider" id="dropSlider" min="0" max="70" value="30" oninput="updateDropout()">
+        </div>
+      </div>
+      <div class="flex-col">
+        <div class="vis-card">
+          <div class="vis-label">How Dropout Works</div>
+          <p style="color:var(--muted);font-size:13px;line-height:1.7">During training, dropout randomly turns off a fraction of neurons. This forces the network to not rely on any single pathway, building redundancy. It's like training many different sub-networks simultaneously.</p>
+          <p style="color:var(--muted);font-size:13px;line-height:1.7;margin-top:8px">During inference, all neurons are active, but outputs are scaled to compensate for the dropped connections during training.</p>
+        </div>
+        <div class="grid-2" style="gap:10px">
+          <div class="vis-card" style="text-align:center">
+            <div style="font-size:24px;margin-bottom:4px">🚫</div>
+            <div class="vis-label">Without Dropout</div>
+            <p style="color:var(--red);font-size:12px">Over-relies on specific pathways. Prone to overfitting.</p>
+          </div>
+          <div class="vis-card" style="text-align:center">
+            <div style="font-size:24px;margin-bottom:4px">✅</div>
+            <div class="vis-label">With Dropout</div>
+            <p style="color:var(--green);font-size:12px">Builds robust features. Better generalization.</p>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
-    <section class="card reveal" id="sec-4">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 5</div>
-          <h2 data-eli5="Neurons combine clues">Dense Layer</h2>
-          <p class="text" data-eli5="Dense neurons look at many flattened numbers together and learn combinations that hint at each clothing type.">
-            Dense neurons combine distributed feature evidence into class-relevant latent representations. This is where local patterns become semantic decision signals.
-          </p>
-          <div class="formula">169 -> 32 hidden features</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Each dense neuron has many weights. It learns what combination of clues means things like sneaker, coat, or bag.">
-                Dense neurons combine many clues at once. One neuron may respond to "curved sole + lace texture", another to "long vertical structure", and so on. Together they build class evidence.
-              </p>
-              <p data-eli5="This is a major decision stage because it mixes clues from across the whole image, not just one local patch.">
-                This stage is powerful but parameter-heavy, which is why earlier conv + pooling layers first compress the image into meaningful features.
-              </p>
-            </div>
-          </details>
-        </div>
-        <div class="vis">
-          <div class="dense-wrap">
-            <svg class="dense-svg" id="dense-svg" viewBox="0 0 430 230"></svg>
-            <div class="mono" style="font-size:11px;color:var(--muted)">INPUT FEATURES -> HIDDEN REPRESENTATION -> LOGITS</div>
-          </div>
-        </div>
-      </div>
-    </section>
+<!-- ═══════════ STATS ═══════════ -->
+<section class="section" id="stats">
+  <div class="section-head">
+    <div class="section-icon">📈</div>
+    <div><h2>Model Statistics</h2><p>Key metrics from a typical CNN trained on Fashion-MNIST.</p></div>
+  </div>
+  <div class="section-body">
+    <div class="grid-3" id="statsGrid">
+      <div class="stat-card"><div class="stat-value" data-target="93218" id="statParams">0</div><div class="stat-label">Parameters</div></div>
+      <div class="stat-card"><div class="stat-value" data-target="15" id="statEpochs">0</div><div class="stat-label">Epochs</div></div>
+      <div class="stat-card"><div class="stat-value" data-target="96.2" data-suffix="%" id="statTrainAcc">0%</div><div class="stat-label">Training Accuracy</div></div>
+      <div class="stat-card"><div class="stat-value" data-target="91.8" data-suffix="%" id="statValAcc">0%</div><div class="stat-label">Validation Accuracy</div></div>
+      <div class="stat-card"><div class="stat-value" data-target="0.12" data-prefix="" id="statLoss">0</div><div class="stat-label">Final Loss</div></div>
+    </div>
+  </div>
+</section>
 
-    <section class="card reveal" id="sec-5">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Layer 6</div>
-          <h2 data-eli5="Pick the class">Softmax Prediction</h2>
-          <p class="text" data-eli5="The network gives each clothing type a confidence score. The highest one is the final answer.">
-            Final logits are converted to a normalized probability distribution using Softmax. The largest probability is selected as the predicted class.
-          </p>
-          <div class="formula">Sum of probabilities = 100%</div>
-          <details class="deep-dive">
-            <summary>Deep Dive</summary>
-            <div class="deep-dive-body">
-              <p data-eli5="Softmax turns raw scores into percentages that all add up to 100 percent.">
-                Softmax converts raw class scores into probabilities. The key rule: all probabilities add to 1 (or 100%).
-              </p>
-              <p data-eli5="The model outputs confidence, but confidence is not always perfect certainty, so calibration still matters.">
-                Highest probability becomes the prediction, but confidence is not perfect truth. A model can still be confidently wrong, so this should be interpreted as model confidence, not certainty.
-              </p>
-            </div>
-          </details>
-        </div>
-        <div class="vis">
-          <div class="softmax" id="softmax"></div>
-          <div style="font-size:10px; color:var(--muted); margin-top:14px; text-align:center;">Note: This is a simplified heuristic model based on pixel statistics, so predictions are illustrative.</div>
-          <div class="legend">
-            <div class="mono" style="font-size:11px;color:var(--text);margin-bottom:8px">CLASS-COLOR LEGEND</div>
-            <div class="legend-grid" id="legend"></div>
-          </div>
-        </div>
-      </div>
-    </section>
+<!-- ═══════════ QUIZ ═══════════ -->
+<section class="section" id="quiz">
+  <div class="section-head">
+    <div class="section-icon">❓</div>
+    <div><h2>Knowledge Check</h2><p>Test your understanding of CNNs, training, and regularization.</p></div>
+    <span class="tag tag-interactive">Interactive</span>
+  </div>
+  <div class="section-body" id="quizContainer"></div>
+</section>
 
-    <section class="card reveal after-softmax" id="sec-6">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Model Stats</div>
-          <h2>Parameter Breakdown</h2>
-          <p class="text">Reference CNN parameter profile (similar architecture to your explainer). This helps students see where model capacity actually lives.</p>
-          <div class="metric-grid">
-            <div class="metric"><div class="num" id="total-params">243,786</div><div class="lbl">Total Params</div></div>
-            <div class="metric"><div class="num">84%</div><div class="lbl">In Dense Layer</div></div>
-            <div class="metric"><div class="num">6</div><div class="lbl">Pipeline Stages</div></div>
-            <div class="metric"><div class="num">10</div><div class="lbl">Output Classes</div></div>
-          </div>
-        </div>
-        <div class="vis">
-          <div style="width:min(470px,100%)">
-            <div class="params-bars" id="params-bars"></div>
-          </div>
-        </div>
-      </div>
-    </section>
+<!-- ═══════════ FAQ ═══════════ -->
+<section class="section" id="faq">
+  <div class="section-head">
+    <div class="section-icon">💬</div>
+    <div><h2>Frequently Asked Questions</h2></div>
+  </div>
+  <div class="section-body" id="faqContainer"></div>
+</section>
 
-    <section class="card reveal" id="sec-7">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Knowledge Check</div>
-          <h2>Quick Interactive Quiz</h2>
-          <p class="text">Short checkpoints to reinforce intuition while students explore. This section gives immediate answer feedback.</p>
-        </div>
-        <div class="vis">
-          <div style="width:min(520px,100%)">
-            <div class="quiz-wrap">
-              <div class="mono" id="quiz-counter" style="font-size:11px;color:var(--muted);margin-bottom:8px">Q1 / Q4</div>
-              <div class="quiz-q" id="quiz-q"></div>
-              <div class="quiz-opts" id="quiz-opts"></div>
-              <div class="quiz-foot">
-                <div class="quiz-fb" id="quiz-fb">Pick an answer.</div>
-                <button class="btn" id="quiz-next">Next</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+</div><!-- .wrap -->
 
-    <section class="card reveal" id="sec-8">
-      <div class="card-grid">
-        <div class="explain">
-          <div class="eyebrow">Common Questions</div>
-          <h2>CNN FAQ by Layer</h2>
-          <p class="text">Frequently asked questions students usually ask during layer-by-layer CNN walkthroughs.</p>
-        </div>
-        <div class="vis">
-          <div style="width:min(540px,100%)" class="faq-grid" id="faq-grid"></div>
-        </div>
-      </div>
-    </section>
-  </main>
+<!-- Footer -->
+<footer>
+  <div class="ftitle">CNN Ultimate Guide</div>
+  <p>Built as an interactive deep learning concept visualizer. No frameworks, no dependencies — pure HTML, CSS, and JavaScript.</p>
+</footer>
 
-  <script>
-    const labels = ["T-shirt", "Trouser", "Pullover", "Dress", "Coat", "Sandal", "Shirt", "Sneaker", "Bag", "Ankle boot"];
-    let kernel = [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]];
-    const state = {
-      image: [],
-      convMap: [],
-      reluMap: [],
-      poolMap: [],
-      flatVec: [],
-      denseVec: [],
-      mouse: { x: 8, y: 8 },
-      eli5: false,
-      quizIdx: 0
-    };
-    const quizData = [
-      {
-        q: "Why does a 3x3 valid convolution on a 28x28 image produce 26x26 output?",
-        opts: ["Because pooling already shrinks it", "Because the kernel cannot go beyond image borders", "Because softmax removes 2 rows/cols", "Because ReLU sets edge values to zero"],
-        ans: 1,
-        fb: "Correct. With valid convolution, the kernel only slides where it fully fits: 28 - 3 + 1 = 26."
-      },
-      {
-        q: "What does Flatten do?",
-        opts: ["Learns new features", "Applies ReLU to each value", "Reshapes feature maps into a single vector", "Computes class probabilities"],
-        ans: 2,
-        fb: "Correct. Flatten is a reshape operation with no trainable parameters."
-      },
-      {
-        q: "What is the main role of Dense layers in this CNN?",
-        opts: ["Local edge detection", "Spatial downsampling", "Combining distributed features for decision making", "Pixel normalization"],
-        ans: 2,
-        fb: "Correct. Dense layers aggregate global evidence into class-separating representations."
-      },
-      {
-        q: "What does Softmax guarantee?",
-        opts: ["All logits are positive", "Probabilities sum to 1", "The model is always correct", "All classes are equally likely"],
-        ans: 1,
-        fb: "Correct. Softmax converts logits into a normalized probability distribution."
-      }
-    ];
-    const faqData = [
-      { q: "Input Layer: Why normalize pixels to 0-1?", a: "Normalization stabilizes optimization by reducing scale mismatch between activations and gradients. Training usually converges faster and more reliably." },
-      { q: "Convolution: Are filters hand-written?", a: "No. Filter weights are learned automatically through backpropagation. Training data shapes what each filter detects." },
-      { q: "ReLU: Why remove negatives?", a: "ReLU keeps strong positive matches and introduces non-linearity. Without non-linearity, stacked layers become equivalent to one linear transform." },
-      { q: "Pooling: Why max and not average?", a: "Max pooling emphasizes strongest local evidence and often gives better invariance to small translations for recognition tasks." },
-      { q: "Flatten/Dense: Why needed after conv blocks?", a: "Convolution extracts local spatial features; Dense layers combine them globally to classify the whole object." },
-      { q: "Softmax: Is confidence always reliable?", a: "Not always. High probability can still be wrong. Confidence calibration and out-of-distribution checks are important in real systems." }
-    ];
+<script>
+'use strict';
 
-    function makeStarterImage() {
-      state.image = Array.from({ length: 28 }, () => Array(28).fill(0.08));
-      for (let r = 5; r < 24; r++) for (let c = 9; c < 19; c++) state.image[r][c] = 0.72;
-      for (let r = 8; r < 11; r++) for (let c = 5; c < 23; c++) state.image[r][c] = 0.64;
+// ══════════════════════════════════════════════════════════════════
+// UTILITY HELPERS
+// ══════════════════════════════════════════════════════════════════
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+// ── Progress bar & scroll-to-top ────────────────────────────────
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+  $('#progressBar').style.width = pct + '%';
+  $('#scrollTopBtn').classList.toggle('show', h.scrollTop > 500);
+  highlightNav();
+});
+$('#scrollTopBtn').addEventListener('click', () => window.scrollTo({top:0,behavior:'smooth'}));
+
+function highlightNav() {
+  const sections = ['hero','pipeline','input','conv','pool','flatten','dense','softmax','training','biasvar','dropout','stats','quiz','faq'];
+  let current = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < 200) current = id;
+  });
+  $$('.nav-link').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+}
+
+// ── Section reveal on scroll ────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold: 0.08});
+$$('.section').forEach(s => observer.observe(s));
+
+// ══════════════════════════════════════════════════════════════════
+// INPUT IMAGE
+// ══════════════════════════════════════════════════════════════════
+const IMG_SIZE = 28;
+let inputData = new Float32Array(IMG_SIZE * IMG_SIZE);
+
+const SAMPLES = {
+  shoe: (r,c) => {
+    if (r > 20 && r < 26 && c > 3 && c < 25) return .9;
+    if (r > 8 && r < 22 && c > 6 && c < 22) return .5 + Math.sin((c-6)*0.5)*0.3;
+    if (r > 5 && r < 12 && c > 14 && c < 23) return .7;
+    return 0;
+  },
+  bag: (r,c) => {
+    if (r > 5 && r < 24 && c > 6 && c < 22) return .65;
+    if (r > 3 && r < 7 && c > 9 && c < 19) return .5;
+    if (r === 3 && c > 10 && c < 18) return .8;
+    return 0;
+  },
+  shirt: (r,c) => {
+    if (r > 6 && r < 24 && c > 7 && c < 21) return .6;
+    if (r > 3 && r < 10 && c > 3 && c < 8) return .55;
+    if (r > 3 && r < 10 && c > 20 && c < 25) return .55;
+    if (r > 3 && r < 7 && c > 10 && c < 18) return .45;
+    return 0;
+  }
+};
+
+let activeSample = 'shoe';
+function generateSample(name) {
+  activeSample = name;
+  const fn = SAMPLES[name];
+  for (let r = 0; r < IMG_SIZE; r++)
+    for (let c = 0; c < IMG_SIZE; c++)
+      inputData[r * IMG_SIZE + c] = Math.max(0, Math.min(1, fn(r, c) + (Math.random() * 0.08)));
+  drawInput();
+  runConvolution();
+}
+
+function drawInput() {
+  const canvas = $('#inputCanvas'), ctx = canvas.getContext('2d');
+  const s = canvas.width / IMG_SIZE;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let r = 0; r < IMG_SIZE; r++)
+    for (let c = 0; c < IMG_SIZE; c++) {
+      const v = Math.floor(inputData[r * IMG_SIZE + c] * 255);
+      ctx.fillStyle = `rgb(${v},${v},${v})`;
+      ctx.fillRect(c * s, r * s, s, s);
     }
+  // Grid lines
+  ctx.strokeStyle = 'rgba(41,223,255,.08)';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= IMG_SIZE; i++) {
+    ctx.beginPath(); ctx.moveTo(i*s,0); ctx.lineTo(i*s,canvas.height); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*s); ctx.lineTo(canvas.width,i*s); ctx.stroke();
+  }
+}
 
-    function drawGridCanvas(canvasId, data, size) {
-      const ctx = document.getElementById(canvasId).getContext("2d");
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-          const v = Math.max(0, Math.min(1, data[r][c]));
-          const g = Math.round(v * 255);
-          ctx.fillStyle = `rgb(${g},${g},${g})`;
-          ctx.fillRect(c * (280 / size), r * (280 / size), Math.ceil(280 / size), Math.ceil(280 / size));
-        }
-      }
+function setSample(btn) {
+  $$('[data-sample]').forEach(b => b.classList.remove('active-toggle'));
+  btn.classList.add('active-toggle');
+  generateSample(btn.dataset.sample);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CONVOLUTION
+// ══════════════════════════════════════════════════════════════════
+const KERNELS = {
+  edge: [[-1,-1,-1],[-1,8,-1],[-1,-1,-1]],
+  blur: [[1/9,1/9,1/9],[1/9,1/9,1/9],[1/9,1/9,1/9]],
+  sharpen: [[0,-1,0],[-1,5,-1],[0,-1,0]]
+};
+let currentKernel = 'edge';
+let convOutput = [];
+let convAnimId = null;
+let convAnimPos = 0;
+
+function renderKernelGrid() {
+  const grid = $('#kernelGrid');
+  const k = KERNELS[currentKernel];
+  grid.innerHTML = '';
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 3; c++) {
+      const v = k[r][c];
+      const div = document.createElement('div');
+      div.className = 'kcell' + (v > 0 ? ' pos' : v < 0 ? ' neg' : '');
+      div.textContent = v % 1 === 0 ? v : v.toFixed(2);
+      grid.appendChild(div);
     }
+}
 
-    function computeConvAndRelu() {
-      const conv = Array.from({ length: 26 }, () => Array(26).fill(0));
-      const relu = Array.from({ length: 26 }, () => Array(26).fill(0));
-      for (let r = 0; r < 26; r++) {
-        for (let c = 0; c < 26; c++) {
-          let s = 0;
-          for (let dr = 0; dr < 3; dr++) {
-            for (let dc = 0; dc < 3; dc++) s += state.image[r + dr][c + dc] * kernel[dr][dc];
-          }
-          conv[r][c] = s;
-          relu[r][c] = Math.max(0, s);
-        }
-      }
-      state.convMap = conv;
-      state.reluMap = relu;
-      const pool = Array.from({ length: 13 }, () => Array(13).fill(0));
-      for (let r = 0; r < 13; r++) {
-        for (let c = 0; c < 13; c++) {
-          const a = relu[r * 2][c * 2];
-          const b = relu[r * 2][c * 2 + 1];
-          const d = relu[r * 2 + 1][c * 2];
-          const e = relu[r * 2 + 1][c * 2 + 1];
-          pool[r][c] = Math.max(a, b, d, e);
-        }
-      }
-      state.poolMap = pool;
-      state.flatVec = pool.flat();
-      const dense = [];
-      for (let i = 0; i < 32; i++) {
-        const idx = (i * 5) % state.flatVec.length;
-        const a = state.flatVec[idx];
-        const b = state.flatVec[(idx + 29) % state.flatVec.length];
-        dense.push(Math.max(0, a * 0.9 + b * 0.55 - 0.2));
-      }
-      state.denseVec = dense;
-    }
+function setKernel(btn) {
+  $$('[data-kname]').forEach(b => b.classList.remove('active-toggle'));
+  btn.classList.add('active-toggle');
+  currentKernel = btn.dataset.kname;
+  renderKernelGrid();
+  runConvolution();
+}
 
-    function drawConvMap() {
-      const ctx = document.getElementById("conv").getContext("2d");
-      let max = 0;
-      for (const row of state.reluMap) for (const v of row) if (v > max) max = v;
-      max = max || 1;
-      for (let r = 0; r < 26; r++) {
-        for (let c = 0; c < 26; c++) {
-          const n = state.reluMap[r][c] / max;
-          const rr = Math.round(35 + n * 220);
-          const gg = Math.round(30 + n * 110);
-          const bb = Math.round(45 + n * 70);
-          ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
-          ctx.fillRect(c * (280 / 26), r * (280 / 26), Math.ceil(280 / 26), Math.ceil(280 / 26));
-        }
-      }
-    }
-
-    function updateScannerAndReadout() {
-      const px = 280 / 26;
-      const scanner = document.getElementById("scanner");
-      scanner.style.left = `${state.mouse.x * px}px`;
-      scanner.style.top = `${state.mouse.y * px}px`;
-      scanner.style.width = `${px}px`;
-      scanner.style.height = `${px}px`;
-
+function runConvolution() {
+  const k = KERNELS[currentKernel];
+  const outSize = IMG_SIZE - 2;
+  convOutput = new Float32Array(outSize * outSize);
+  let maxVal = 0;
+  for (let r = 0; r < outSize; r++)
+    for (let c = 0; c < outSize; c++) {
       let sum = 0;
-      const parts = [];
-      for (let dr = 0; dr < 3; dr++) {
-        for (let dc = 0; dc < 3; dc++) {
-          const p = state.image[state.mouse.y + dr][state.mouse.x + dc];
-          const w = kernel[dr][dc];
-          sum += p * w;
-          parts.push(`${p.toFixed(2)}*${w}`);
+      for (let kr = 0; kr < 3; kr++)
+        for (let kc = 0; kc < 3; kc++)
+          sum += inputData[(r + kr) * IMG_SIZE + (c + kc)] * k[kr][kc];
+      sum = Math.max(0, sum); // ReLU
+      convOutput[r * outSize + c] = sum;
+      if (sum > maxVal) maxVal = sum;
+    }
+  // Normalize
+  if (maxVal > 0) for (let i = 0; i < convOutput.length; i++) convOutput[i] /= maxVal;
+  drawConv(-1, -1);
+}
+
+function drawConv(highlightR, highlightC) {
+  const canvas = $('#convCanvas'), ctx = canvas.getContext('2d');
+  const outSize = IMG_SIZE - 2;
+  const s = canvas.width / outSize;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let r = 0; r < outSize; r++)
+    for (let c = 0; c < outSize; c++) {
+      const v = Math.floor(convOutput[r * outSize + c] * 255);
+      ctx.fillStyle = `rgb(${Math.floor(v*0.4)},${Math.floor(v*0.8)},${v})`;
+      ctx.fillRect(c * s, r * s, s, s);
+    }
+  if (highlightR >= 0 && highlightC >= 0) {
+    ctx.strokeStyle = 'rgba(255,138,76,.8)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(highlightC * s, highlightR * s, s, s);
+    // Also show kernel window on input
+    drawInputHighlight(highlightR, highlightC);
+    // Dot product readout
+    const k = KERNELS[currentKernel];
+    let terms = [], sum = 0;
+    for (let kr = 0; kr < 3; kr++)
+      for (let kc = 0; kc < 3; kc++) {
+        const pv = inputData[(highlightR+kr)*IMG_SIZE+(highlightC+kc)];
+        const kv = k[kr][kc];
+        terms.push(`${pv.toFixed(2)}×${kv%1===0?kv:kv.toFixed(2)}`);
+        sum += pv * kv;
+      }
+    const relu = Math.max(0, sum);
+    $('#dotReadout').textContent = `Σ = ${sum.toFixed(4)}\nReLU → ${relu.toFixed(4)}`;
+  }
+}
+
+function drawInputHighlight(r, c) {
+  const canvas = $('#inputCanvas'), ctx = canvas.getContext('2d');
+  drawInput();
+  const s = canvas.width / IMG_SIZE;
+  ctx.strokeStyle = 'rgba(255,138,76,.7)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(c * s, r * s, s * 3, s * 3);
+}
+
+function toggleConvAnim() {
+  if (convAnimId) {
+    clearInterval(convAnimId);
+    convAnimId = null;
+    $('#convAnimBtn').textContent = '▶ Animate Scan';
+    drawConv(-1, -1);
+    drawInput();
+    return;
+  }
+  convAnimPos = 0;
+  const outSize = IMG_SIZE - 2;
+  $('#convAnimBtn').textContent = '⏸ Stop';
+  convAnimId = setInterval(() => {
+    const r = Math.floor(convAnimPos / outSize);
+    const c = convAnimPos % outSize;
+    drawConv(r, c);
+    convAnimPos++;
+    if (convAnimPos >= outSize * outSize) convAnimPos = 0;
+  }, 40);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// POOLING
+// ══════════════════════════════════════════════════════════════════
+let poolStep = 0;
+
+function animatePooling() {
+  const outSize = IMG_SIZE - 2; // 26
+  const poolSize = Math.floor(outSize / 2); // 13
+  const canvas = $('#poolCanvas'), ctx = canvas.getContext('2d');
+  const s = canvas.width / outSize;
+
+  poolStep = 0;
+  const total = poolSize * poolSize;
+
+  function step() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw conv output as background
+    for (let r = 0; r < outSize; r++)
+      for (let c = 0; c < outSize; c++) {
+        const v = Math.floor(convOutput[r * outSize + c] * 200);
+        ctx.fillStyle = `rgba(${v},${v},${v},.3)`;
+        ctx.fillRect(c * s, r * s, s, s);
+      }
+
+    // Draw completed pool windows
+    for (let i = 0; i <= poolStep && i < total; i++) {
+      const pr = Math.floor(i / poolSize), pc = i % poolSize;
+      const sr = pr * 2, sc = pc * 2;
+      // Find max in 2x2
+      let mx = 0;
+      for (let dr = 0; dr < 2; dr++)
+        for (let dc = 0; dc < 2; dc++) {
+          const idx = (sr+dr)*outSize+(sc+dc);
+          if (idx < convOutput.length && convOutput[idx] > mx) mx = convOutput[idx];
         }
-      }
-      document.getElementById("readout").textContent =
-        `Patch (${state.mouse.x}, ${state.mouse.y})\n` +
-        `${parts.slice(0, 4).join(" + ")} + ...\n` +
-        `feature-map cell=${sum.toFixed(3)} -> relu=${Math.max(0, sum).toFixed(3)}`;
+      const v = Math.floor(mx * 255);
+      const isActive = i === poolStep;
+      ctx.fillStyle = isActive ? `rgba(41,223,255,.5)` : `rgb(${Math.floor(v*0.3)},${Math.floor(v*0.7)},${v})`;
+      ctx.fillRect(sc * s, sr * s, s * 2, s * 2);
+      ctx.strokeStyle = isActive ? 'rgba(255,138,76,.8)' : 'rgba(41,223,255,.2)';
+      ctx.lineWidth = isActive ? 3 : 1;
+      ctx.strokeRect(sc * s, sr * s, s * 2, s * 2);
     }
 
-    function buildSteps() {
-      const names = ["Input", "Conv+ReLU", "Pooling", "Flatten", "Dense", "Softmax", "Stats", "Quiz", "FAQ"];
-      const steps = document.getElementById("steps");
-      const mini = document.getElementById("mini-map");
-      names.forEach((name, i) => {
-        const el = document.createElement("div");
-        el.className = "step" + (i === 0 ? " active" : "");
-        el.textContent = `Step ${i + 1}: ${name}`;
-        el.onclick = () => {
-          const target = document.getElementById(`sec-${i}`);
-          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-        };
-        steps.appendChild(el);
-        const dot = document.createElement("div");
-        dot.className = "mini-dot" + (i === 0 ? " active" : "");
-        dot.onclick = () => {
-          const target = document.getElementById(`sec-${i}`);
-          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
-        };
-        mini.appendChild(dot);
-      });
-      window.addEventListener("scroll", () => {
-        const sections = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => document.getElementById(`sec-${i}`));
-        let active = 0;
-        sections.forEach((s, i) => {
-          const r = s.getBoundingClientRect();
-          if (r.top < window.innerHeight * 0.45) active = i;
-        });
-        [...steps.children].forEach((c, i) => c.classList.toggle("active", i === active));
-        [...mini.children].forEach((c, i) => c.classList.toggle("active", i === active));
-      });
+    if (poolStep < total) {
+      const pr = Math.floor(poolStep / poolSize), pc = poolStep % poolSize;
+      $('#poolReadout').textContent = `Window [${pr*2},${pc*2}] → max selected | Step ${poolStep+1}/${total}`;
     }
 
-    let poolInterval;
-    function renderPoolVis() {
-      const grid = document.getElementById("pool-grid");
-      if (!state.reluMap || !state.reluMap.length) return;
-      
-      const vals = [];
-      const maxRelu = Math.max(...state.reluMap.flat(), 0.001);
-      for(let r=0; r<6; r++) {
-         for(let c=0; c<6; c++) {
-            vals.push(state.reluMap[r][c] / maxRelu);
-         }
-      }
-      grid.innerHTML = vals.map((v, idx) => `<div class="pool-cell" id="pc-${idx}" style="background:rgba(53,214,154,${v})">${(v*100).toFixed(0)}</div>`).join("");
-      const blocks = [[0,1,6,7],[2,3,8,9],[4,5,10,11],[12,13,18,19],[14,15,20,21],[16,17,22,23],[24,25,30,31],[26,27,32,33],[28,29,34,35]];
-      let i = 0;
-      if (poolInterval) clearInterval(poolInterval);
-      poolInterval = setInterval(() => {
-        for (let j = 0; j < 36; j++) document.getElementById(`pc-${j}`).style.outline = "none";
-        blocks[i].forEach(id => document.getElementById(`pc-${id}`).style.outline = "2px solid var(--cyan)");
-        i = (i + 1) % blocks.length;
-      }, 650);
+    poolStep++;
+    if (poolStep <= total) requestAnimationFrame(() => setTimeout(step, 30));
+    else $('#poolReadout').textContent = `Pooling complete! Output: ${poolSize}×${poolSize} (reduced from ${outSize}×${outSize})`;
+  }
+  step();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FLATTEN
+// ══════════════════════════════════════════════════════════════════
+function animateFlatten() {
+  const svg = $('#flattenSvg');
+  const gridSize = 5, cellSize = 28, gap = 4;
+  const startX = 30, startY = 40;
+  const vecX = 220, vecY = 120, vecCellW = 6, vecCellH = 18;
+
+  svg.innerHTML = '';
+  const cells = [];
+  for (let r = 0; r < gridSize; r++)
+    for (let c = 0; c < gridSize; c++) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', startX + c * (cellSize + gap));
+      rect.setAttribute('y', startY + r * (cellSize + gap));
+      rect.setAttribute('width', cellSize);
+      rect.setAttribute('height', cellSize);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('fill', `rgba(157,107,255,${0.15 + Math.random()*0.4})`);
+      rect.setAttribute('stroke', 'rgba(157,107,255,.3)');
+      svg.appendChild(rect);
+      cells.push(rect);
     }
 
-    function softmax(arr) {
-      const m = Math.max(...arr);
-      const exps = arr.map(v => Math.exp(v - m));
-      const s = exps.reduce((a,b) => a + b, 0);
-      return exps.map(v => v / s);
+  // Animate cells to vector positions
+  let idx = 0;
+  function moveNext() {
+    if (idx >= cells.length) return;
+    const rect = cells[idx];
+    const tx = vecX + idx * (vecCellW + 2);
+    const ty = vecY;
+    rect.style.transition = 'all .3s ease';
+    rect.setAttribute('x', tx);
+    rect.setAttribute('y', ty);
+    rect.setAttribute('width', vecCellW);
+    rect.setAttribute('height', vecCellH);
+    rect.setAttribute('fill', `rgba(41,223,255,${0.2 + Math.random()*0.4})`);
+    rect.setAttribute('stroke', 'rgba(41,223,255,.4)');
+    idx++;
+    setTimeout(moveNext, 60);
+  }
+  setTimeout(moveNext, 300);
+
+  // Labels
+  const t1 = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t1.setAttribute('x', startX); t1.setAttribute('y', 30);
+  t1.setAttribute('fill', '#a4b0d4'); t1.setAttribute('font-size', '12');
+  t1.textContent = '2D Feature Map';
+  svg.appendChild(t1);
+
+  const t2 = document.createElementNS('http://www.w3.org/2000/svg','text');
+  t2.setAttribute('x', vecX); t2.setAttribute('y', 110);
+  t2.setAttribute('fill', '#a4b0d4'); t2.setAttribute('font-size', '12');
+  t2.textContent = '1D Vector';
+  svg.appendChild(t2);
+
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg','text');
+  arrow.setAttribute('x', 185); arrow.setAttribute('y', 90);
+  arrow.setAttribute('fill', 'var(--cyan)'); arrow.setAttribute('font-size', '24');
+  arrow.textContent = '→';
+  svg.appendChild(arrow);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DENSE LAYER
+// ══════════════════════════════════════════════════════════════════
+function animateDense() {
+  const canvas = $('#denseCanvas'), ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const layers = [6, 8, 5];
+  const positions = [];
+
+  // Compute positions
+  layers.forEach((n, li) => {
+    const x = 60 + li * (W - 120) / (layers.length - 1);
+    const arr = [];
+    for (let i = 0; i < n; i++) {
+      const y = (H / 2) - ((n - 1) * 28) / 2 + i * 28;
+      arr.push({x, y});
     }
+    positions.push(arr);
+  });
 
-    function renderSoftmax() {
-      const energy = state.flatVec.reduce((a, b) => a + b, 0);
-      const center = state.poolMap.slice(4, 9).reduce((acc, row) => acc + row.slice(4, 9).reduce((a, b) => a + b, 0), 0);
-      const leftRight = state.poolMap.reduce((acc, row) => acc + row.slice(0, 6).reduce((a, b) => a + b, 0) - row.slice(7).reduce((a, b) => a + b, 0), 0);
-      const hiddenEnergy = state.denseVec.reduce((a, b) => a + b, 0);
-      const hash = state.image.flat().reduce((a,b)=>a+b,0);
-      const seed = [
-        energy, 
-        center + Math.sin(hash)*10, 
-        Math.abs(leftRight) + Math.cos(hash)*10, 
-        hiddenEnergy, 
-        (center * 0.6) + Math.sin(hash*2)*5, 
-        energy * 0.35, 
-        (Math.abs(leftRight) * 0.8) + Math.cos(hash*3)*8, 
-        (hiddenEnergy * 0.75) + (hash%5), 
-        (energy * 0.22) + (hash%3), 
-        center * 0.33
-      ];
-      const probs = softmax(seed.map(v => v / 18));
-      const winner = probs.indexOf(Math.max(...probs));
-
-      const root = document.getElementById("softmax");
-      root.innerHTML = "";
-      probs.forEach((p, i) => {
-        const row = document.createElement("div");
-        row.className = "bar-row";
-        row.innerHTML = `
-          <div class="mono" style="font-size:10px;color:var(--muted);text-align:right">${labels[i]}</div>
-          <div class="bar-track"><div class="bar-fill" style="width:${(p*100).toFixed(1)}%"></div></div>
-          <div class="mono" style="font-size:10px;color:var(--cyan)">${(p*100).toFixed(0)}%</div>
-        `;
-        root.appendChild(row);
-      });
-      const win = document.createElement("div");
-      win.className = "winner";
-      win.textContent = `Prediction: ${labels[winner]} (${(probs[winner]*100).toFixed(1)}%)`;
-      root.appendChild(win);
-    }
-
-    let flattenReq;
-    function renderFlatten() {
-      const host = document.getElementById("flat-bars");
-      if (!host || !state.flatVec) return;
-      if (flattenReq) cancelAnimationFrame(flattenReq);
-      host.innerHTML = "";
-      const slice = state.flatVec.slice(0, 44);
-      const max = Math.max(...slice, 0.0001);
-      slice.forEach((v, idx) => {
-        const h = document.createElement("div");
-        h.className = "flat-bar";
-        h.dataset.h = 14 + (v / max) * 95;
-        h.dataset.idx = idx;
-        h.style.height = `${h.dataset.h}px`;
-        host.appendChild(h);
-      });
-      function animate() {
-        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          const t = Date.now() / 600;
-          [...host.children].forEach(h => {
-             const idx = parseFloat(h.dataset.idx);
-             h.style.transform = `translateY(${Math.sin(t + idx * 0.25) * -4}px)`;
-          });
-        }
-        flattenReq = requestAnimationFrame(animate);
-      }
-      animate();
-    }
-
-    function renderDense() {
-      const svg = document.getElementById("dense-svg");
-      if (!svg) return;
-      svg.innerHTML = "";
-      const inN = 10, hidN = 7, outN = 5;
-      const x1 = 60, x2 = 210, x3 = 360;
-      const yPos = (i, n) => 24 + (i * (180 / (n - 1)));
-      let html = "";
-      for (let i = 0; i < inN; i++) {
-        for (let j = 0; j < hidN; j++) html += `<line class="dline" x1="${x1}" y1="${yPos(i, inN)}" x2="${x2}" y2="${yPos(j, hidN)}"></line>`;
-      }
-      for (let j = 0; j < hidN; j++) {
-        for (let k = 0; k < outN; k++) html += `<line class="dline" x1="${x2}" y1="${yPos(j, hidN)}" x2="${x3}" y2="${yPos(k, outN)}"></line>`;
-      }
-      for (let i = 0; i < inN; i++) html += `<circle class="dcircle" id="din-${i}" cx="${x1}" cy="${yPos(i, inN)}" r="6"></circle>`;
-      for (let j = 0; j < hidN; j++) html += `<circle class="dcircle" id="dh-${j}" cx="${x2}" cy="${yPos(j, hidN)}" r="7"></circle>`;
-      for (let k = 0; k < outN; k++) html += `<circle class="dcircle" id="do-${k}" cx="${x3}" cy="${yPos(k, outN)}" r="7"></circle>`;
-      html += `<text x="${x1}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">flat in</text>`;
-      html += `<text x="${x2}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">hidden</text>`;
-      html += `<text x="${x3}" y="218" text-anchor="middle" fill="#9ca8cc" font-size="10" font-family="JetBrains Mono">logits</text>`;
-      svg.innerHTML = html;
-    }
-
-    function animateDense() {
-      const circles = document.querySelectorAll(".dcircle");
-      if (!circles.length) return;
-      circles.forEach(c => c.classList.remove("live"));
-      const i = Math.floor(Math.random() * 10);
-      const h = Math.floor(Math.random() * 7);
-      const o = Math.floor(Math.random() * 5);
-      document.getElementById(`din-${i}`)?.classList.add("live");
-      setTimeout(() => document.getElementById(`dh-${h}`)?.classList.add("live"), 120);
-      setTimeout(() => document.getElementById(`do-${o}`)?.classList.add("live"), 240);
-    }
-
-    function renderLegend() {
-      const colors = ["#8f6fff", "#4fc3ff", "#b67bff", "#45d7b2", "#3eb28c", "#ff9a6b", "#45c7ff", "#45de8d", "#d086ff", "#31b2ff"];
-      const root = document.getElementById("legend");
-      root.innerHTML = "";
-      labels.forEach((name, i) => {
-        const row = document.createElement("div");
-        row.innerHTML = `<span class="sw" style="background:${colors[i]}"></span>${name}`;
-        root.appendChild(row);
-      });
-    }
-
-    function renderParams() {
-      const data = [
-        { name: "Conv2D Layer 1", value: 640, color: "#ff9a6b" },
-        { name: "Conv2D Layer 2", value: 36928, color: "#ff7d4f" },
-        { name: "Dense 128", value: 204928, color: "#c68bff" },
-        { name: "Softmax 10", value: 1290, color: "#45de8d" }
-      ];
-      const total = data.reduce((a, b) => a + b.value, 0);
-      const host = document.getElementById("params-bars");
-      host.innerHTML = "";
-      data.forEach((d, i) => {
-        const row = document.createElement("div");
-        row.className = "p-row";
-        row.innerHTML = `
-          <div class="mono" style="font-size:10px;color:var(--muted)">${d.name}</div>
-          <div class="p-track"><div class="p-fill" id="pfill-${i}" style="background:${d.color}"></div></div>
-          <div class="mono" style="font-size:10px;color:var(--text);text-align:right">${d.value.toLocaleString()}</div>
-        `;
-        host.appendChild(row);
-      });
-      setTimeout(() => {
-        data.forEach((d, i) => {
-          const fill = document.getElementById(`pfill-${i}`);
-          if (fill) fill.style.width = `${(d.value / total) * 100}%`;
-        });
-      }, 120);
-    }
-
-    function renderQuiz() {
-      const q = quizData[state.quizIdx];
-      document.getElementById("quiz-counter").textContent = `Q${state.quizIdx + 1} / Q${quizData.length}`;
-      document.getElementById("quiz-q").textContent = q.q;
-      const host = document.getElementById("quiz-opts");
-      host.innerHTML = "";
-      document.getElementById("quiz-fb").textContent = "Pick an answer.";
-      q.opts.forEach((opt, idx) => {
-        const b = document.createElement("button");
-        b.className = "quiz-opt";
-        b.textContent = opt;
-        b.onclick = () => {
-          [...host.children].forEach(c => c.disabled = true);
-          b.classList.add(idx === q.ans ? "good" : "bad");
-          if (idx !== q.ans && host.children[q.ans]) host.children[q.ans].classList.add("good");
-          document.getElementById("quiz-fb").textContent = idx === q.ans ? q.fb : `Not quite. ${q.fb}`;
-        };
-        host.appendChild(b);
-      });
-    }
-
-    function setupQuiz() {
-      renderQuiz();
-      document.getElementById("quiz-next").addEventListener("click", () => {
-        state.quizIdx = (state.quizIdx + 1) % quizData.length;
-        renderQuiz();
-      });
-    }
-
-    function setupFaq() {
-      const host = document.getElementById("faq-grid");
-      host.innerHTML = "";
-      faqData.forEach(item => {
-        const box = document.createElement("div");
-        box.className = "faq-item";
-        box.innerHTML = `<button class="faq-q">${item.q}</button><div class="faq-a">${item.a}</div>`;
-        box.querySelector(".faq-q").addEventListener("click", () => box.classList.toggle("open"));
-        host.appendChild(box);
-      });
-    }
-
-    function renderKernelEditor() {
-       const ed = document.getElementById("kernel-editor");
-       if (!ed) return;
-       ed.innerHTML = "";
-       for(let r=0; r<3; r++) {
-          for(let c=0; c<3; c++) {
-             const v = kernel[r][c];
-             const cell = document.createElement("div");
-             cell.style.cssText = `width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:12px; cursor:pointer; border-radius:4px; font-weight:bold; ${v>0?'background:rgba(53,214,154,0.2);color:var(--green)':v<0?'background:rgba(255,138,76,0.2);color:var(--orange)':'background:rgba(255,255,255,0.1);color:var(--muted)'}`;
-             cell.textContent = v;
-             cell.onclick = () => {
-                kernel[r][c] = v === 1 ? 0 : v === 0 ? -1 : 1;
-                renderKernelEditor();
-                rerenderAll();
-             };
-             ed.appendChild(cell);
-          }
-       }
-    }
-
-    function setupPresets() {
-      document.getElementById("btn-preset-stripes").addEventListener("click", () => {
-        for (let r = 0; r < 28; r++) {
-          for (let c = 0; c < 28; c++) {
-            state.image[r][c] = (c % 4 < 2) ? 0.8 : 0.1;
-          }
-        }
-        rerenderAll();
-      });
-      document.getElementById("btn-preset-circle").addEventListener("click", () => {
-        for (let r = 0; r < 28; r++) {
-          for (let c = 0; c < 28; c++) {
-            const dist = Math.hypot(r - 14, c - 14);
-            state.image[r][c] = (dist > 6 && dist < 10) ? 0.9 : 0.1;
-          }
-        }
-        rerenderAll();
-      });
-    }
-
-    function setupUpload() {
-      document.getElementById("upload").addEventListener("change", e => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-        const rd = new FileReader();
-        rd.onload = evt => {
-          const img = new Image();
-          img.onload = () => {
-            const cv = document.createElement("canvas");
-            cv.width = 28; cv.height = 28;
-            const ctx = cv.getContext("2d");
-            ctx.drawImage(img, 0, 0, 28, 28);
-            const px = ctx.getImageData(0, 0, 28, 28).data;
-            for (let r = 0; r < 28; r++) {
-              for (let c = 0; c < 28; c++) {
-                const i = (r * 28 + c) * 4;
-                state.image[r][c] = (px[i] + px[i + 1] + px[i + 2]) / 3 / 255;
-              }
-            }
-            rerenderAll();
-          };
-          img.src = evt.target.result;
-        };
-        rd.readAsDataURL(file);
-      });
-    }
-
-    function setupELI5() {
-      const btn = document.getElementById("mode-btn");
-      btn.addEventListener("click", () => {
-        state.eli5 = !state.eli5;
-        btn.textContent = state.eli5 ? "Expert Mode" : "ELI5 Mode";
-        document.querySelectorAll("[data-eli5]").forEach(el => {
-          if (!el.dataset.orig) el.dataset.orig = el.textContent;
-          el.textContent = state.eli5 ? el.getAttribute("data-eli5") : el.dataset.orig;
+  let progress = 0;
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // Connections
+    for (let li = 0; li < positions.length - 1; li++) {
+      positions[li].forEach(a => {
+        positions[li + 1].forEach(b => {
+          const alpha = (li < progress) ? 0.3 : 0.06;
+          ctx.strokeStyle = `rgba(41,223,255,${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         });
       });
     }
-
-    function initConvHover() {
-      const cv = document.getElementById("conv");
-      cv.addEventListener("mousemove", e => {
-        const rect = cv.getBoundingClientRect();
-        const x = Math.floor((e.clientX - rect.left) / (280 / 26));
-        const y = Math.floor((e.clientY - rect.top) / (280 / 26));
-        state.mouse.x = Math.min(25, Math.max(0, x));
-        state.mouse.y = Math.min(25, Math.max(0, y));
-        updateScannerAndReadout();
-      });
-    }
-
-    function drawHeroBackground() {
-      const canvas = document.getElementById("hero-canvas");
-      const ctx = canvas.getContext("2d");
-      const particles = Array.from({ length: 75 }, () => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35
-      }));
-      function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = Math.max(460, window.innerHeight * 0.88);
-      }
-      resize();
-      window.addEventListener("resize", resize);
-      function tick() {
-        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-           ctx.clearRect(0, 0, canvas.width, canvas.height);
-           ctx.strokeStyle = "rgba(41,223,255,0.06)";
-           for (let x = 0; x < canvas.width; x += 80) {
-             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-           }
-           return;
-        }
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = "rgba(41,223,255,0.06)";
-        for (let x = 0; x < canvas.width; x += 80) {
-          ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-        }
-        for (const p of particles) {
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
-          if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(41,223,255,0.45)";
+    // Neurons
+    positions.forEach((layer, li) => {
+      layer.forEach((p, ni) => {
+        const active = li <= progress;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = active ? 'rgba(41,223,255,.35)' : 'rgba(255,255,255,.06)';
+        ctx.fill();
+        ctx.strokeStyle = active ? 'rgba(41,223,255,.7)' : 'rgba(255,255,255,.15)';
+        ctx.lineWidth = 2; ctx.stroke();
+        if (active) {
+          ctx.shadowColor = 'rgba(41,223,255,.4)';
+          ctx.shadowBlur = 12;
+          ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
-        requestAnimationFrame(tick);
+      });
+    });
+    // Labels
+    ctx.fillStyle = '#a4b0d4'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    const labels = ['Input', 'Hidden', 'Output'];
+    positions.forEach((layer, li) => {
+      ctx.fillText(labels[li], layer[0].x, H - 10);
+    });
+
+    if (progress < positions.length) {
+      progress++;
+      setTimeout(() => requestAnimationFrame(draw), 500);
+    }
+  }
+  progress = 0;
+  draw();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SOFTMAX
+// ══════════════════════════════════════════════════════════════════
+const CLASSES = ['T-shirt','Trouser','Pullover','Sneaker','Bag'];
+
+function initSoftmax() {
+  const container = $('#softmaxBars');
+  container.innerHTML = '';
+  CLASSES.forEach((cls, i) => {
+    container.innerHTML += `<div class="bar-row"><div class="bar-label">${cls}</div><div class="bar-track"><div class="bar-fill" id="bf${i}"></div></div><div class="bar-pct" id="bp${i}">0%</div></div>`;
+  });
+}
+
+function animateSoftmax() {
+  // Map each sample to its correct class index: T-shirt=0, Trouser=1, Pullover=2, Sneaker=3, Bag=4
+  const correctIdx = {shoe: 3, bag: 4, shirt: 0};
+  const targetIdx = correctIdx[activeSample] ?? 0;
+
+  // Generate logits biased toward the correct class
+  const logits = CLASSES.map((_, i) => {
+    if (i === targetIdx) return 3.5 + Math.random() * 1.5; // strong signal for correct class
+    return Math.random() * 1.5 - 1; // weaker signal for others
+  });
+  const maxL = Math.max(...logits);
+  const exps = logits.map(l => Math.exp(l - maxL));
+  const sumE = exps.reduce((a,b) => a+b, 0);
+  const probs = exps.map(e => e / sumE);
+
+  probs.forEach((p, i) => {
+    const pct = (p * 100).toFixed(1);
+    setTimeout(() => {
+      $(`#bf${i}`).style.width = pct + '%';
+      $(`#bp${i}`).textContent = pct + '%';
+      // Highlight the winning class
+      $(`#bf${i}`).style.background = i === targetIdx
+        ? 'linear-gradient(90deg, var(--green), var(--cyan))'
+        : 'linear-gradient(90deg, var(--cyan), var(--violet))';
+    }, i * 100);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// TRAINING SECTION
+// ══════════════════════════════════════════════════════════════════
+const TRAIN_STEPS = [
+  {title:'Forward Pass', text:'Input data flows through the network layer by layer, producing a prediction. Each layer transforms the data using its current weights and biases.'},
+  {title:'Loss Calculation', text:'The loss function (e.g. cross-entropy) measures how far the prediction is from the true label. A high loss means a poor prediction; a low loss means the model is close to correct.'},
+  {title:'Backpropagation', text:'Gradients are computed by working backwards through the network using the chain rule. Each weight receives a gradient indicating how it contributed to the error.'},
+  {title:'Weight Update', text:'The optimizer (e.g. SGD, Adam) adjusts each weight by subtracting learning_rate × gradient. This nudges the weights toward values that produce lower loss.'},
+  {title:'Repeat (Epochs)', text:'One pass through the entire dataset is one epoch. Training repeats for many epochs, gradually improving the model. Each epoch typically reduces loss and improves accuracy.'}
+];
+
+function setTrainStep(idx) {
+  $$('.train-node').forEach((n, i) => n.classList.toggle('active-node', i === idx));
+  const s = TRAIN_STEPS[idx];
+  $('#trainDesc').innerHTML = `<div class="vis-label">${s.title}</div><p style="color:var(--muted);font-size:14px">${s.text}</p>`;
+}
+
+// Weight animation
+let currentWeight = 0.42;
+function animateWeight() {
+  const grad = (Math.random() * 0.08 - 0.02);
+  const lr = 0.01;
+  currentWeight -= lr * grad * 100;
+  currentWeight = Math.round(currentWeight * 10000) / 10000;
+  const el = $('#weightVal');
+  el.style.color = grad > 0 ? 'var(--green)' : 'var(--orange)';
+  el.textContent = currentWeight.toFixed(4);
+  setTimeout(() => el.style.color = 'var(--cyan)', 600);
+}
+
+// ── Training data (stable, generated once) ───────────────────────
+const MAX_EPOCHS = 20;
+const chartData = {trainLoss:[], valLoss:[], trainAcc:[], valAcc:[]};
+let trainedEpochs = 0;  // how many epochs have been "trained"
+let showVal = false;
+let isTraining = false;
+
+// Pre-compute the full 20-epoch curve (deterministic seed-like approach)
+(function initChartData() {
+  for (let i = 0; i < MAX_EPOCHS; i++) {
+    const noise = Math.sin(i * 7.3) * 0.5 + 0.5; // deterministic pseudo-noise
+    const noise2 = Math.sin(i * 13.1) * 0.5 + 0.5;
+    chartData.trainLoss.push(2.1 * Math.exp(-0.22 * i) + 0.08 + noise * 0.04);
+    chartData.valLoss.push(2.1 * Math.exp(-0.16 * i) + 0.18 + noise2 * 0.06);
+    chartData.trainAcc.push(Math.min(97.5, 48 + i * 2.9 + noise * 1.5));
+    chartData.valAcc.push(Math.min(92.5, 44 + i * 2.4 + noise2 * 2));
+  }
+})();
+
+// Epoch bars + chart are unified — "Run 5 Epochs" trains 5 more epochs
+function runEpochs() {
+  if (isTraining) return;
+  isTraining = true;
+  const container = $('#epochBars');
+  const startEpoch = trainedEpochs;
+  const batchSize = 5;
+  let step = 0;
+
+  function tick() {
+    if (step >= batchSize || trainedEpochs >= MAX_EPOCHS) {
+      isTraining = false;
+      if (trainedEpochs >= MAX_EPOCHS) {
+        container.innerHTML += `<div style="font-size:12px;color:var(--green);margin-top:6px">✓ Training complete (${MAX_EPOCHS} epochs)</div>`;
       }
-      tick();
+      return;
     }
+    const i = trainedEpochs;
+    const loss = chartData.trainLoss[i].toFixed(3);
+    const acc = chartData.trainAcc[i].toFixed(1);
+    const valAcc = chartData.valAcc[i].toFixed(1);
 
-    function rerenderAll() {
-      computeConvAndRelu();
-      drawGridCanvas("input", state.image, 28);
-      drawConvMap();
-      updateScannerAndReadout();
-      renderFlatten();
-      renderDense();
-      renderSoftmax();
-      renderLegend();
-      renderParams();
-    }
+    container.innerHTML += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:12px;color:var(--muted);min-width:60px">Epoch ${i+1}</span>
+      <div style="flex:1;height:10px;border-radius:5px;background:rgba(255,255,255,.06);overflow:hidden">
+        <div style="height:100%;width:${acc}%;background:linear-gradient(90deg,var(--cyan),var(--violet));border-radius:5px;transition:width .5s"></div>
+      </div>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--cyan);min-width:50px">${acc}%</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);min-width:55px">L:${loss}</span>
+    </div>`;
 
-    function setupReveal() {
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) entry.target.classList.add("in");
-        });
-      }, { threshold: 0.2 });
-      document.querySelectorAll(".reveal").forEach(el => observer.observe(el));
-    }
+    trainedEpochs++;
+    step++;
+    drawLossChart(); // redraw chart with new epoch
+    setTimeout(tick, 400);
+  }
 
-    function init() {
-      makeStarterImage();
-      buildSteps();
-      setupUpload();
-      setupPresets();
-      setupELI5();
-      renderKernelEditor();
-      initConvHover();
-      renderPoolVis();
-      drawHeroBackground();
-      setupReveal();
-      setupQuiz();
-      setupFaq();
-      rerenderAll();
-      setInterval(animateDense, 500);
+  tick();
+}
+
+// Training chart — only draws up to trainedEpochs
+function toggleMetrics() {
+  showVal = !showVal;
+  $('#chartToggle').textContent = showVal ? 'Hide Validation Curves' : 'Show Validation Curves';
+  $('#chartToggle').classList.toggle('active-toggle', showVal);
+  drawLossChart();
+}
+
+function drawLossChart() {
+  const canvas = $('#lossChart'), ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = {l:50, r:20, t:20, b:40};
+  ctx.clearRect(0, 0, W, H);
+
+  const n = trainedEpochs; // only plot trained epochs
+  const totalSlots = MAX_EPOCHS;
+
+  function drawLine(fullData, maxVal, color, dashed) {
+    if (n < 1) return;
+    const data = fullData.slice(0, n);
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+    if (dashed) ctx.setLineDash([6,4]); else ctx.setLineDash([]);
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad.l + i * ((W - pad.l - pad.r) / (totalSlots - 1));
+      const y = pad.t + (1 - v / maxVal) * (H - pad.t - pad.b);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+    // Draw dot at latest point
+    if (data.length > 0) {
+      const lastX = pad.l + (data.length-1) * ((W - pad.l - pad.r) / (totalSlots - 1));
+      const lastY = pad.t + (1 - data[data.length-1] / maxVal) * (H - pad.t - pad.b);
+      ctx.beginPath(); ctx.arc(lastX, lastY, 4, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
     }
-    init();
-  </script>
+  }
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + i * (H - pad.t - pad.b) / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H - pad.b); ctx.lineTo(W - pad.r, H - pad.b); ctx.stroke();
+  ctx.fillStyle = '#a4b0d4'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('Epochs', W/2, H - 6);
+  ctx.textAlign = 'left';
+  ctx.save(); ctx.translate(14, H/2); ctx.rotate(-Math.PI/2); ctx.fillText('Loss / Accuracy', 0, 0); ctx.restore();
+  // Epoch ticks
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  for (let i = 0; i < totalSlots; i += 5) {
+    const x = pad.l + i * ((W - pad.l - pad.r) / (totalSlots - 1));
+    ctx.fillText(i + 1, x, H - pad.b + 14);
+  }
+
+  // Draw curves (only up to trainedEpochs)
+  drawLine(chartData.trainLoss, 2.5, '#29dfff', false);
+  drawLine(chartData.trainAcc, 100, '#9d6bff', false);
+  if (showVal) {
+    drawLine(chartData.valLoss, 2.5, '#ff8a4c', true);
+    drawLine(chartData.valAcc, 100, '#35d69a', true);
+  }
+
+  // Legend
+  const lx = pad.l + 10, ly = pad.t + 8;
+  const items = [{label:'Train Loss',color:'#29dfff'},{label:'Train Acc',color:'#9d6bff'}];
+  if (showVal) items.push({label:'Val Loss',color:'#ff8a4c'},{label:'Val Acc',color:'#35d69a'});
+  ctx.textAlign = 'left';
+  items.forEach((it, i) => {
+    const x = lx + i * 115;
+    ctx.fillStyle = it.color; ctx.fillRect(x, ly, 12, 8);
+    ctx.fillStyle = '#a4b0d4'; ctx.font = '10px sans-serif'; ctx.fillText(it.label, x + 16, ly + 8);
+  });
+
+  // Show status text
+  if (n === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,.2)'; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Click "Run 5 Epochs" to start training', W/2, H/2);
+    ctx.textAlign = 'left';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BIAS VS VARIANCE
+// ══════════════════════════════════════════════════════════════════
+const BV_DATA = {
+  under: {
+    diagnosis: 'High Bias', dColor: 'var(--orange)', dBg: 'rgba(255,138,76,.12)',
+    text: 'The model is too simple to capture the underlying patterns. Both training and validation performance are poor. The model "underfits" — it has not learned enough from the data.',
+    train: i => 0.6 + i * 0.01 + Math.random() * 0.02,
+    val: i => 0.55 + i * 0.008 + Math.random() * 0.02
+  },
+  good: {
+    diagnosis: 'Good Fit', dColor: 'var(--green)', dBg: 'rgba(53,214,154,.12)',
+    text: 'The model captures the true patterns in the data. Training and validation performance are both high and close to each other. This is the ideal generalization sweet spot.',
+    train: i => 0.5 + i * 0.028 + Math.random() * 0.01,
+    val: i => 0.48 + i * 0.025 + Math.random() * 0.015
+  },
+  over: {
+    diagnosis: 'High Variance', dColor: 'var(--red)', dBg: 'rgba(255,92,108,.12)',
+    text: 'The model memorizes training data perfectly but fails on new data. The gap between training and validation performance is large. This is classic overfitting — the model is too complex for the data available.',
+    train: i => 0.5 + i * 0.035,
+    val: i => 0.48 + i * 0.015 + (i > 10 ? (i-10)*0.005 : 0) + Math.random() * 0.02
+  }
+};
+
+function setBV(mode) {
+  $$('.bv-btn').forEach(b => b.classList.remove('sel'));
+  event.target.classList.add('sel');
+  const d = BV_DATA[mode];
+  $('#bvDiagnosis').textContent = d.diagnosis;
+  $('#bvDiagnosis').style.background = d.dBg;
+  $('#bvDiagnosis').style.color = d.dColor;
+  $('#bvText').textContent = d.text;
+  drawBVChart(d);
+}
+
+function drawBVChart(d) {
+  const canvas = $('#bvChart'), ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const pad = {l:45, r:15, t:15, b:35};
+  ctx.clearRect(0, 0, W, H);
+
+  const N = 20;
+  const trainD = [], valD = [];
+  for (let i = 0; i < N; i++) { trainD.push(Math.min(1, d.train(i))); valD.push(Math.min(1, d.val(i))); }
+
+  ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H-pad.b); ctx.lineTo(W-pad.r, H-pad.b); ctx.stroke();
+
+  function line(data, color, dash) {
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+    ctx.setLineDash(dash ? [6,4] : []);
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad.l + i * ((W-pad.l-pad.r)/(N-1));
+      const y = pad.t + (1 - v) * (H - pad.t - pad.b);
+      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  line(trainD, '#29dfff', false);
+  line(valD, '#ff8a4c', true);
+
+  ctx.fillStyle = '#a4b0d4'; ctx.font = '11px sans-serif';
+  ctx.fillText('Epochs', W/2, H-6);
+  // Legend
+  ctx.fillStyle = '#29dfff'; ctx.fillRect(pad.l+10, pad.t+8, 12, 8);
+  ctx.fillStyle = '#a4b0d4'; ctx.fillText('Train', pad.l+26, pad.t+16);
+  ctx.fillStyle = '#ff8a4c'; ctx.fillRect(pad.l+80, pad.t+8, 12, 8);
+  ctx.fillStyle = '#a4b0d4'; ctx.fillText('Validation', pad.l+96, pad.t+16);
+}
+
+// ── Dartboard Analogy ──────────────────────────────────────────
+const DARTBOARDS = [
+  {title:'High Bias\nLow Variance', biasX:30, biasY:-25, spread:8, color:'var(--orange)',
+   label:'Underfitting', desc:'Consistent but wrong. Model is too simple to find the right answer.'},
+  {title:'Low Bias\nLow Variance', biasX:0, biasY:0, spread:8, color:'var(--green)',
+   label:'Good Fit ✓', desc:'Clustered on the bullseye. Accurate and consistent predictions.'},
+  {title:'Low Bias\nHigh Variance', biasX:2, biasY:-2, spread:35, color:'var(--cyan)',
+   label:'Slight Overfit', desc:'Right on average, but inconsistent. Needs regularization.'},
+  {title:'High Bias\nHigh Variance', biasX:22, biasY:-20, spread:32, color:'var(--red)',
+   label:'Worst Case', desc:'Wrong AND inconsistent. Model needs fundamental rethinking.'}
+];
+
+function initDartboards() {
+  const container = $('#dartboards');
+  if (!container) return;
+  container.innerHTML = '';
+  DARTBOARDS.forEach((db, idx) => {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'text-align:center';
+    const sz = 160, cx = sz/2, cy = sz/2, r = sz/2 - 10;
+    // Build SVG
+    let svg = `<svg viewBox="0 0 ${sz} ${sz}" style="width:100%;max-width:${sz}px;height:auto;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))">`;
+    // Board rings
+    const rings = [1, 0.72, 0.46, 0.22];
+    const ringColors = ['rgba(255,255,255,.06)','rgba(255,255,255,.04)','rgba(255,255,255,.08)','rgba(255,255,255,.05)'];
+    rings.forEach((frac, i) => {
+      svg += `<circle cx="${cx}" cy="${cy}" r="${r*frac}" fill="${ringColors[i]}" stroke="rgba(255,255,255,.12)" stroke-width="1"/>`;
+    });
+    // Crosshair
+    svg += `<line x1="${cx}" y1="${cy-r}" x2="${cx}" y2="${cy+r}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>`;
+    svg += `<line x1="${cx-r}" y1="${cy}" x2="${cx+r}" y2="${cy}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>`;
+    // Bullseye dot
+    svg += `<circle cx="${cx}" cy="${cy}" r="3" fill="rgba(255,92,108,.7)"/>`;
+    // Darts (8 darts per board)
+    for (let d = 0; d < 8; d++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * db.spread;
+      const dx = cx + db.biasX + Math.cos(angle) * dist;
+      const dy = cy + db.biasY + Math.sin(angle) * dist;
+      svg += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="4" fill="${db.color}" opacity=".85" stroke="rgba(255,255,255,.3)" stroke-width="1">`;
+      svg += `<animate attributeName="r" from="0" to="4" dur="0.4s" begin="${d*0.08}s" fill="freeze"/>`;
+      svg += `<animate attributeName="opacity" from="0" to=".85" dur="0.3s" begin="${d*0.08}s" fill="freeze"/>`;
+      svg += `</circle>`;
+    }
+    svg += `</svg>`;
+
+    // Labels
+    const titleLines = db.title.split('\n');
+    wrap.innerHTML = svg +
+      `<div style="margin-top:10px;font-size:12px;font-weight:700;color:${db.color};letter-spacing:.5px">${titleLines[0]}</div>` +
+      `<div style="font-size:11px;font-weight:600;color:${db.color};opacity:.7">${titleLines[1]}</div>` +
+      `<div style="margin-top:6px;padding:4px 10px;border-radius:8px;display:inline-block;font-size:10px;font-weight:700;letter-spacing:.5px;border:1px solid ${db.color};color:${db.color};background:rgba(0,0,0,.2)">${db.label}</div>` +
+      `<p style="color:var(--muted);font-size:11px;margin-top:8px;line-height:1.5">${db.desc}</p>` +
+      `<button class="btn btn-sm" onclick="reThrow(${idx})" style="margin-top:8px;font-size:10px">🎯 Re-throw</button>`;
+    container.appendChild(wrap);
+  });
+}
+
+function reThrow(idx) {
+  // Re-render just that one dartboard
+  initDartboards(); // simple approach: re-render all (fast enough)
+}
+
+// ══════════════════════════════════════════════════════════════════
+// DROPOUT
+// ══════════════════════════════════════════════════════════════════
+const NUM_NEURONS = 24;
+let dropMode = 'train';
+let dropRate = 30;
+
+function initNeurons() {
+  const grid = $('#neuronGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < NUM_NEURONS; i++) {
+    const div = document.createElement('div');
+    div.className = 'neuron';
+    div.id = 'n' + i;
+    div.textContent = '⬤';
+    grid.appendChild(div);
+  }
+  applyDropout();
+}
+
+function applyDropout() {
+  for (let i = 0; i < NUM_NEURONS; i++) {
+    const el = $(`#n${i}`);
+    if (dropMode === 'infer') {
+      el.className = 'neuron active-n';
+    } else {
+      const dropped = Math.random() * 100 < dropRate;
+      el.className = 'neuron' + (dropped ? ' dropped' : ' active-n');
+    }
+  }
+}
+
+function setDropMode(mode) {
+  dropMode = mode;
+  $('#dropTrainBtn').classList.toggle('active-toggle', mode === 'train');
+  $('#dropInferBtn').classList.toggle('active-toggle', mode === 'infer');
+  $('#dropModeLabel').textContent = mode === 'train' ? 'Training Mode — Some neurons disabled' : 'Inference Mode — All neurons active';
+  $('#reRandomBtn').style.display = mode === 'train' ? 'inline-flex' : 'none';
+  applyDropout();
+}
+
+function reRandomize() { applyDropout(); }
+
+function updateDropout() {
+  dropRate = parseInt($('#dropSlider').value);
+  $('#dropRateLabel').textContent = dropRate + '%';
+  if (dropMode === 'train') applyDropout();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// STATS (animated counters)
+// ══════════════════════════════════════════════════════════════════
+let statsAnimated = false;
+const statsObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !statsAnimated) {
+      statsAnimated = true;
+      animateCounters();
+    }
+  });
+}, {threshold: 0.3});
+
+function animateCounters() {
+  const items = [
+    {id:'statParams', target:93218, suffix:'', decimals:0},
+    {id:'statEpochs', target:15, suffix:'', decimals:0},
+    {id:'statTrainAcc', target:96.2, suffix:'%', decimals:1},
+    {id:'statValAcc', target:91.8, suffix:'%', decimals:1},
+    {id:'statLoss', target:0.12, suffix:'', decimals:2}
+  ];
+  items.forEach(it => {
+    const el = $(`#${it.id}`);
+    let current = 0;
+    const step = it.target / 40;
+    const interval = setInterval(() => {
+      current += step;
+      if (current >= it.target) { current = it.target; clearInterval(interval); }
+      el.textContent = (it.decimals > 0 ? current.toFixed(it.decimals) : Math.floor(current).toLocaleString()) + it.suffix;
+    }, 30);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+// QUIZ
+// ══════════════════════════════════════════════════════════════════
+const QUESTIONS = [
+  {q:'What does a convolution filter primarily detect?', opts:['Global image statistics','Local spatial patterns like edges and textures','Color histogram','Image resolution'], ans:1},
+  {q:'What does max pooling do?', opts:['Increases spatial resolution','Applies activation functions','Reduces spatial size by keeping maximum values','Adds more filters'], ans:2},
+  {q:'What happens during backpropagation?', opts:['New images are generated','Gradients are computed for each weight','Weights are randomly reset','The model predicts outputs'], ans:1},
+  {q:'Which scenario indicates overfitting?', opts:['Low train acc, low val acc','High train acc, high val acc','High train acc, low val acc','Low train acc, high val acc'], ans:2},
+  {q:'What does dropout do during training?', opts:['Adds more neurons','Randomly disables some neurons','Increases learning rate','Removes entire layers'], ans:1},
+  {q:'During inference, how does dropout behave?', opts:['Same as training','All neurons are active','Half the neurons are dropped','Dropout rate is doubled'], ans:1}
+];
+
+let quizIdx = 0, quizScore = 0, quizAnswered = false;
+
+function renderQuiz() {
+  const container = $('#quizContainer');
+  if (quizIdx >= QUESTIONS.length) {
+    container.innerHTML = `<div style="text-align:center;padding:30px">
+      <div style="font-size:48px;margin-bottom:12px">🎉</div>
+      <h3 style="font-size:24px;margin-bottom:8px">Quiz Complete!</h3>
+      <p style="color:var(--cyan);font-size:20px;font-weight:700">${quizScore} / ${QUESTIONS.length} correct</p>
+      <button class="btn btn-primary" onclick="quizIdx=0;quizScore=0;renderQuiz()" style="margin-top:16px">Retake Quiz</button>
+    </div>`;
+    return;
+  }
+  const q = QUESTIONS[quizIdx];
+  quizAnswered = false;
+  let html = `<div class="quiz-q">Q${quizIdx+1}. ${q.q}</div><div class="quiz-opts">`;
+  q.opts.forEach((o, i) => {
+    html += `<button class="quiz-opt" id="qo${i}" onclick="checkAnswer(${i},${q.ans})">${o}</button>`;
+  });
+  html += `</div><div class="quiz-progress">Question ${quizIdx+1} of ${QUESTIONS.length} • Score: ${quizScore}</div>`;
+  container.innerHTML = html;
+}
+
+function checkAnswer(selected, correct) {
+  if (quizAnswered) return;
+  quizAnswered = true;
+  $$('.quiz-opt').forEach((b, i) => {
+    b.classList.add('disabled');
+    if (i === correct) b.classList.add('correct');
+    if (i === selected && i !== correct) b.classList.add('wrong');
+  });
+  if (selected === correct) quizScore++;
+  setTimeout(() => { quizIdx++; renderQuiz(); }, 1200);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FAQ
+// ══════════════════════════════════════════════════════════════════
+const FAQS = [
+  {q:'What does convolution do?', a:'Convolution applies a small filter across the image, computing dot products at each position. This detects local patterns like edges, corners, and textures. Different filters learn to detect different features automatically during training.'},
+  {q:'Why do we use pooling?', a:'Pooling reduces the spatial dimensions of feature maps, lowering computational cost while preserving the strongest activations. It also provides a degree of translation invariance — small shifts in the input won\'t drastically change the output.'},
+  {q:'What is backpropagation?', a:'Backpropagation is the algorithm that computes gradients of the loss with respect to each weight in the network. It works backwards from the output layer using the chain rule of calculus, telling each weight how much it contributed to the error.'},
+  {q:'What is bias vs variance?', a:'Bias measures how far off the model\'s average predictions are from the truth (underfitting). Variance measures how sensitive the model is to the specific training data (overfitting). The goal is to minimize both for good generalization.'},
+  {q:'Why is dropout helpful?', a:'Dropout prevents co-adaptation of neurons by randomly disabling them during training. This forces the network to learn redundant representations and not rely on any single pathway, acting as a form of ensemble regularization.'},
+  {q:'Does dropout work during inference?', a:'No. During inference (testing/prediction), all neurons are active. Their outputs are scaled down by the dropout rate to compensate for the fact that more neurons are now active than during any single training step.'}
+];
+
+function initFAQ() {
+  const container = $('#faqContainer');
+  FAQS.forEach((faq, i) => {
+    container.innerHTML += `<div class="faq-item" id="faq${i}"><div class="faq-q" onclick="toggleFaq(${i})">${faq.q}</div><div class="faq-a"><p>${faq.a}</p></div></div>`;
+  });
+}
+
+function toggleFaq(i) {
+  $(`#faq${i}`).classList.toggle('open');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  generateSample('shoe');
+  renderKernelGrid();
+  initSoftmax();
+  initNeurons();
+  renderQuiz();
+  initFAQ();
+  drawLossChart();
+  setBV.mode = 'under';
+  drawBVChart(BV_DATA.under);
+  initDartboards();
+
+  // Stats observer
+  const statsEl = document.getElementById('stats');
+  if (statsEl) statsObserver.observe(statsEl);
+
+  // Flatten initial render
+  animateFlatten();
+});
+
+</script>
 </body>
 </html>
