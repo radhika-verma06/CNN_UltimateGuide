@@ -41,7 +41,7 @@ An interactive, visual guide to **Convolutional Neural Networks** — covering a
 Just open the file in any browser:
 
 ```
-open cnn_lab_ultimate.html
+[open cnn_lab_ultimate.html](https://radhika-verma06.github.io/CNN_UltimateGuide/cnn_lab_ultimate.html)
 ```
 
 No server, no install, no dependencies needed.
